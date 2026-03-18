@@ -28,6 +28,7 @@
     },
     "plugins": [
       "expo-sqlite"
-    ]
+    ],
+    "scheme": "proyectolbdismov"
   }
 }
