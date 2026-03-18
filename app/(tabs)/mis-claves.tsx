@@ -5,8 +5,10 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import * as CryptoJS from "crypto-js";
 
 import {
+  consumeEncryptedDato,
   deleteEncryptedDato,
   EncryptedClaveItem,
+  getUserData,
   getEncryptedDatos,
   updateEncryptedDato,
 } from "@/backend/user-functions";
@@ -14,6 +16,8 @@ import {
 export default function MisClavesScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const [items, setItems] = useState<EncryptedClaveItem[]>([]);
+  const [activeFilter, setActiveFilter] = useState<"enviadas" | "recibidas">("recibidas");
+  const [myUserId, setMyUserId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -44,6 +48,10 @@ export default function MisClavesScreen() {
   const loadDatos = useCallback(async () => {
     setLoading(true);
     setError("");
+    const currentUser = await getUserData();
+    if (currentUser?.id) {
+      setMyUserId(currentUser.id);
+    }
     const { data, error: fetchError } = await getEncryptedDatos();
 
     if (fetchError || !data) {
@@ -62,6 +70,14 @@ export default function MisClavesScreen() {
     setLoading(false);
   }, []);
 
+  const visibleItems = items.filter((item) => {
+    if (!myUserId) return true;
+    if (activeFilter === "enviadas") {
+      return item.emisor_id === myUserId;
+    }
+    return item.receptor_id === myUserId;
+  });
+
   useFocusEffect(
     useCallback(() => {
       loadDatos();
@@ -75,21 +91,45 @@ export default function MisClavesScreen() {
     }, [clearHideTimer, loadDatos])
   );
 
-  const handleDecrypt = (item: EncryptedClaveItem) => {
+  const handleDecrypt = async (item: EncryptedClaveItem) => {
     const secretKey = process.env.EXPO_PUBLIC_AES_SECRET_KEY || "";
 
     if (!secretKey) {
-      setError("No se encontró la clave secreta para desencriptar.");
+      setError("");
       showToast("No se encontró la clave secreta.", "error");
       return;
     }
 
     try {
-      const bytes = CryptoJS.AES.decrypt(item.dato_encriptado, secretKey);
+      let encryptedPayload = item.dato_encriptado;
+
+      if (activeFilter === "recibidas") {
+        const { data: consumed, error: consumeError } = await consumeEncryptedDato(item.id);
+        if (consumeError || !consumed) {
+          setError("");
+          showToast(consumeError ?? "No se pudo consumir la clave.", "error");
+          return;
+        }
+
+        encryptedPayload = consumed.dato_encriptado;
+        setItems((prev) =>
+          prev.map((entry) =>
+            entry.id === consumed.id
+              ? {
+                  ...entry,
+                  vistas_usadas: consumed.vistas_usadas,
+                  max_vistas: consumed.max_vistas,
+                }
+              : entry
+          )
+        );
+      }
+
+      const bytes = CryptoJS.AES.decrypt(encryptedPayload, secretKey);
       const decrypted = bytes.toString(CryptoJS.enc.Utf8);
 
       if (!decrypted) {
-        setError("No se pudo desencriptar el dato. Revisa tu clave de entorno.");
+        setError("");
         showToast("No se pudo desencriptar el dato.", "error");
         return;
       }
@@ -105,7 +145,7 @@ export default function MisClavesScreen() {
       }, 4000);
       showToast("Texto plano visible por 4 segundos.", "success");
     } catch {
-      setError("Error al desencriptar el dato.");
+      setError("");
       showToast("Error al desencriptar el dato.", "error");
     }
   };
@@ -215,6 +255,21 @@ export default function MisClavesScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Mis claves cifradas</Text>
 
+      <View style={styles.filterRow}>
+        <TouchableOpacity
+          style={[styles.filterButton, activeFilter === "recibidas" && styles.filterButtonActive]}
+          onPress={() => setActiveFilter("recibidas")}
+        >
+          <Text style={[styles.filterText, activeFilter === "recibidas" && styles.filterTextActive]}>Recibidas</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterButton, activeFilter === "enviadas" && styles.filterButtonActive]}
+          onPress={() => setActiveFilter("enviadas")}
+        >
+          <Text style={[styles.filterText, activeFilter === "enviadas" && styles.filterTextActive]}>Enviadas</Text>
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity style={styles.refreshButton} onPress={loadDatos} disabled={loading}>
         <Text style={styles.refreshButtonText}>{loading ? "Cargando..." : "Cargar datos"}</Text>
       </TouchableOpacity>
@@ -228,7 +283,7 @@ export default function MisClavesScreen() {
       ) : null}
 
       <FlatList
-        data={items}
+        data={visibleItems}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight + 16 }]}
         ListEmptyComponent={!loading ? <Text style={styles.empty}>Sin datos todavía.</Text> : null}
@@ -239,6 +294,14 @@ export default function MisClavesScreen() {
               {item.dato_encriptado}
             </Text>
             <Text style={styles.cardDate}>{new Date(item.created_at).toLocaleString()}</Text>
+            {item.fecha_caducidad ? (
+              <Text style={styles.expiryInfo}>Caduca: {new Date(item.fecha_caducidad).toLocaleString()}</Text>
+            ) : (
+              <Text style={styles.expiryInfo}>Sin caducidad</Text>
+            )}
+            <Text style={styles.viewsInfo}>
+              Vistas: {item.vistas_usadas ?? 0} / {item.max_vistas ?? 1}
+            </Text>
 
             <View style={styles.actionsRow}>
               <TouchableOpacity style={styles.decryptButton} onPress={() => handleDecrypt(item)}>
@@ -306,6 +369,31 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 12,
   },
+  filterRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 10,
+  },
+  filterButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingVertical: 8,
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+  },
+  filterButtonActive: {
+    borderColor: "#0f766e",
+    backgroundColor: "#ccfbf1",
+  },
+  filterText: {
+    color: "#334155",
+    fontWeight: "600",
+  },
+  filterTextActive: {
+    color: "#115e59",
+  },
   refreshButton: {
     backgroundColor: "#1f2937",
     borderRadius: 10,
@@ -344,6 +432,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 12,
     color: "#6b7280",
+  },
+  viewsInfo: {
+    marginTop: 6,
+    fontSize: 12,
+    color: "#0f172a",
+    fontWeight: "500",
+  },
+  expiryInfo: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#7c2d12",
+    fontWeight: "500",
   },
   decryptButton: {
     marginTop: 10,

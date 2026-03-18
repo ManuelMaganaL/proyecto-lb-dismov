@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, KeyRound, PlusCircle } from "lucide-react-native";
+import { CircleUserRound, KeyRound, PlusCircle } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabsLayout() {
@@ -28,8 +28,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Inicio",
-          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
+          title: "Perfil",
+          tabBarIcon: ({ color, size }) => <CircleUserRound size={size} color={color} />,
         }}
       />
       <Tabs.Screen
