@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View, Text, StyleSheet } from "react-native";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,44 +35,53 @@ export default function LoginPage() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text>Inicia Sesión</Text>
-      
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-
-      <Input
-        label="Correo"
-        placeholder="Ingresa tu correo"
-        value={email}
-        onChangeText={setEmail}
-      />
-
-      <Input
-        label="Contraseña"
-        placeholder="Ingresa tu contraseña"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-
-      <Button
-        title="Iniciar Sesión"
-        onPress={handleLogin}
-        loading={isSubmitting}
-        disabled={isSubmitting || !email || !password}
-      />
-
-      <Text 
-        style={styles.signupText}
-        onPress={() => {router.push("/auth/signup")}}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        contentInsetAdjustmentBehavior="always"
       >
-        ¿No tienes una cuenta? Regístrate
-      </Text>
-    </View>
+        <Text>Inicia Sesión</Text>
+
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        <Input
+          label="Correo"
+          placeholder="Ingresa tu correo"
+          value={email}
+          onChangeText={setEmail}
+        />
+
+        <Input
+          label="Contraseña"
+          placeholder="Ingresa tu contraseña"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+
+        <Button
+          title="Iniciar Sesión"
+          onPress={handleLogin}
+          loading={isSubmitting}
+          disabled={isSubmitting || !email || !password}
+        />
+
+        <Text
+          style={styles.signupText}
+          onPress={() => {router.push("/auth/signup")}}
+        >
+          ¿No tienes una cuenta? Regístrate
+        </Text>
+      </ScrollView>
+    </KeyboardAvoidingView>
   )
 }
 
@@ -80,6 +89,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: LIGHT_THEME.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,

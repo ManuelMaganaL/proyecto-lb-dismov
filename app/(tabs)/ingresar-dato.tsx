@@ -9,6 +9,7 @@ const IngresarDato = () => {
   const [dato, setDato] = useState('');
   const [loading, setLoading] = useState(false);
   const [mensaje, setMensaje] = useState('');
+  const [mensajeTipo, setMensajeTipo] = useState<'success' | 'error'>('success');
 
 
   const handleSubmit = async () => {
@@ -16,6 +17,7 @@ const IngresarDato = () => {
     setMensaje('');
     try {
       if (!dato.trim()) {
+        setMensajeTipo('error');
         setMensaje('Ingresa un dato antes de continuar.');
         return;
       }
@@ -23,6 +25,7 @@ const IngresarDato = () => {
       // Obtener la clave secreta del entorno
       const secretKey = process.env.EXPO_PUBLIC_AES_SECRET_KEY || '';
       if (!secretKey) {
+        setMensajeTipo('error');
         setMensaje('No se encontró la clave secreta de cifrado.');
         return;
       }
@@ -33,17 +36,19 @@ const IngresarDato = () => {
       const normalizedTitulo = titulo.trim() || 'Clave compartida';
       const { success, error } = await saveEncryptedDato(encrypted, normalizedTitulo);
       if (!success) {
+        setMensajeTipo('error');
         setMensaje(`Cifrado correcto, pero no se pudo guardar: ${error}`);
         return;
       }
 
+      setMensajeTipo('success');
       setMensaje('Dato encriptado y guardado en Supabase.');
       setTitulo('');
       setDato('');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error inesperado';
+      setMensajeTipo('error');
       setMensaje('Error al encriptar/desencriptar el dato: ' + message);
-      console.log('Error encriptando/desencriptando:', error);
     } finally {
       setLoading(false);
     }
@@ -65,11 +70,14 @@ const IngresarDato = () => {
           value={dato}
           onChangeText={setDato}
           placeholder="Escribe un dato"
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
           style={styles.input}
         />
 
         <RNButton title={loading ? 'Encriptando...' : 'Encriptar y Subir'} onPress={handleSubmit} disabled={loading} />
-        {mensaje ? <Text style={styles.mensaje}>{mensaje}</Text> : null}
+        {mensaje ? <Text style={[styles.mensaje, mensajeTipo === 'success' ? styles.ok : styles.fail]}>{mensaje}</Text> : null}
       </View>
     </View>
   );
@@ -110,7 +118,17 @@ const styles = StyleSheet.create({
   },
   mensaje: {
     marginTop: 12,
-    color: '#0f766e',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  ok: {
+    color: '#065f46',
+    backgroundColor: '#d1fae5',
+  },
+  fail: {
+    color: '#991b1b',
+    backgroundColor: '#fee2e2',
   },
 });
 

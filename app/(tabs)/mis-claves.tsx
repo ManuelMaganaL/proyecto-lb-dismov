@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import * as CryptoJS from "crypto-js";
 
 import {
@@ -11,6 +12,7 @@ import {
 } from "@/backend/user-functions";
 
 export default function MisClavesScreen() {
+  const tabBarHeight = useBottomTabBarHeight();
   const [items, setItems] = useState<EncryptedClaveItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -19,13 +21,24 @@ export default function MisClavesScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitulo, setEditTitulo] = useState("");
   const [editDatoPlano, setEditDatoPlano] = useState("");
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearHideTimer = useCallback(() => {
     if (hideTimerRef.current) {
       clearTimeout(hideTimerRef.current);
       hideTimerRef.current = null;
     }
+  }, []);
+
+  const showToast = useCallback((message: string, type: "success" | "error") => {
+    setToast({ message, type });
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = setTimeout(() => setToast(null), 2500);
   }, []);
 
   const loadDatos = useCallback(async () => {
@@ -54,6 +67,10 @@ export default function MisClavesScreen() {
       loadDatos();
       return () => {
         clearHideTimer();
+        if (toastTimerRef.current) {
+          clearTimeout(toastTimerRef.current);
+          toastTimerRef.current = null;
+        }
       };
     }, [clearHideTimer, loadDatos])
   );
@@ -63,6 +80,7 @@ export default function MisClavesScreen() {
 
     if (!secretKey) {
       setError("No se encontró la clave secreta para desencriptar.");
+      showToast("No se encontró la clave secreta.", "error");
       return;
     }
 
@@ -72,6 +90,7 @@ export default function MisClavesScreen() {
 
       if (!decrypted) {
         setError("No se pudo desencriptar el dato. Revisa tu clave de entorno.");
+        showToast("No se pudo desencriptar el dato.", "error");
         return;
       }
 
@@ -84,8 +103,10 @@ export default function MisClavesScreen() {
         setSelectedId(null);
         setSelectedDecrypted("");
       }, 4000);
+      showToast("Texto plano visible por 4 segundos.", "success");
     } catch {
       setError("Error al desencriptar el dato.");
+      showToast("Error al desencriptar el dato.", "error");
     }
   };
 
@@ -96,6 +117,7 @@ export default function MisClavesScreen() {
     const secretKey = process.env.EXPO_PUBLIC_AES_SECRET_KEY || "";
     if (!secretKey) {
       setError("No se encontró la clave secreta para desencriptar.");
+      showToast("No se encontró la clave secreta.", "error");
       return;
     }
 
@@ -107,6 +129,7 @@ export default function MisClavesScreen() {
     } catch {
       setEditDatoPlano("");
       setError("No se pudo preparar el modo edición.");
+      showToast("No se pudo preparar el modo edición.", "error");
     }
   };
 
@@ -121,6 +144,7 @@ export default function MisClavesScreen() {
 
     if (!secretKey) {
       setError("No se encontró la clave secreta para guardar cambios.");
+      showToast("No se encontró la clave secreta.", "error");
       return;
     }
 
@@ -129,10 +153,13 @@ export default function MisClavesScreen() {
 
     if (!normalizedDato) {
       setError("El dato en texto plano no puede estar vacío.");
+      showToast("El dato en texto plano no puede estar vacío.", "error");
       return;
     }
 
     const encrypted = CryptoJS.AES.encrypt(normalizedDato, secretKey).toString();
+
+    setActionLoadingId(item.id);
 
     const { success, error: updateError } = await updateEncryptedDato(item.id, {
       titulo: normalizedTitulo,
@@ -141,27 +168,47 @@ export default function MisClavesScreen() {
 
     if (!success) {
       setError(updateError ?? "No se pudo guardar la edición.");
+      showToast(updateError ?? "No se pudo guardar la edición.", "error");
+      setActionLoadingId(null);
       return;
     }
 
     setError("");
+    showToast("Clave actualizada correctamente.", "success");
     handleCancelEdit();
     await loadDatos();
+    setActionLoadingId(null);
   };
 
   const handleDelete = async (item: EncryptedClaveItem) => {
+    setActionLoadingId(item.id);
     const { success, error: deleteError } = await deleteEncryptedDato(item.id);
 
     if (!success) {
       setError(deleteError ?? "No se pudo eliminar la clave.");
+      showToast(deleteError ?? "No se pudo eliminar la clave.", "error");
+      setActionLoadingId(null);
       return;
     }
 
     setError("");
+    showToast("Clave eliminada correctamente.", "success");
     clearHideTimer();
     setSelectedId(null);
     setSelectedDecrypted("");
     await loadDatos();
+    setActionLoadingId(null);
+  };
+
+  const handleConfirmDelete = (item: EncryptedClaveItem) => {
+    Alert.alert(
+      "Eliminar clave",
+      "Esta acción no se puede deshacer. ¿Deseas continuar?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Eliminar", style: "destructive", onPress: () => handleDelete(item) },
+      ]
+    );
   };
 
   return (
@@ -174,11 +221,16 @@ export default function MisClavesScreen() {
 
       {loading ? <ActivityIndicator style={{ marginTop: 16 }} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {toast ? (
+        <View style={[styles.toast, toast.type === "success" ? styles.toastSuccess : styles.toastError]}>
+          <Text style={styles.toastText}>{toast.message}</Text>
+        </View>
+      ) : null}
 
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight + 16 }]}
         ListEmptyComponent={!loading ? <Text style={styles.empty}>Sin datos todavía.</Text> : null}
         renderItem={({ item }) => (
           <View style={styles.card}>
@@ -195,7 +247,7 @@ export default function MisClavesScreen() {
               <TouchableOpacity style={styles.editButton} onPress={() => handleStartEdit(item)}>
                 <Text style={styles.actionText}>Editar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}>
+              <TouchableOpacity style={styles.deleteButton} onPress={() => handleConfirmDelete(item)}>
                 <Text style={styles.actionText}>Eliminar</Text>
               </TouchableOpacity>
             </View>
@@ -217,7 +269,9 @@ export default function MisClavesScreen() {
 
                 <View style={styles.editActionsRow}>
                   <TouchableOpacity style={styles.saveButton} onPress={() => handleSaveEdit(item)}>
-                    <Text style={styles.actionText}>Guardar</Text>
+                    <Text style={styles.actionText}>
+                      {actionLoadingId === item.id ? "Guardando..." : "Guardar"}
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit}>
                     <Text style={styles.actionText}>Cancelar</Text>
@@ -381,5 +435,25 @@ const styles = StyleSheet.create({
   error: {
     color: "#b91c1c",
     marginTop: 10,
+  },
+  toast: {
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  toastSuccess: {
+    backgroundColor: "#dcfce7",
+    borderWidth: 1,
+    borderColor: "#86efac",
+  },
+  toastError: {
+    backgroundColor: "#fee2e2",
+    borderWidth: 1,
+    borderColor: "#fca5a5",
+  },
+  toastText: {
+    color: "#111827",
+    fontWeight: "500",
   },
 });

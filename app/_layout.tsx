@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { supabase } from "@/backend/supabase/client";
 
@@ -49,18 +50,20 @@ export default function RootLayout() {
     };
   }, [isAuthRoute, router]);
 
-  if (isCheckingSession) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
-
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="auth" />
-    </Stack>
+    <SafeAreaProvider>
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+        {isCheckingSession ? (
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+            <ActivityIndicator />
+          </View>
+        ) : (
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="auth" />
+          </Stack>
+        )}
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
