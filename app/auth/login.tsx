@@ -1,11 +1,11 @@
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { getUserData, login } from "@/backend/user-functions";
+import { login } from "@/backend/user-functions";
 import { LIGHT_THEME } from "@/constants/theme";
 
 export default function LoginPage() {
@@ -15,20 +15,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState<string>("");
 
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    async function checkUser() {
-      const user = await getUserData();
-      if (user) router.push("/");
-      
-      setIsLoading(false);
-    }
-
-    checkUser();
-  }, []);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const handleLogin = async () => {
+    setIsSubmitting(true);
     const { data, error } = await login(email, password);
     if (error || !data) {
       setError(error || "No se pudo iniciar sesión");
@@ -38,8 +28,10 @@ export default function LoginPage() {
 
       setTimeout(() => setError(null), 5000);
     } else {
-      router.push("/");
+      router.replace("/(tabs)");
     }
+
+    setIsSubmitting(false);
   };
 
   return (
@@ -70,7 +62,8 @@ export default function LoginPage() {
       <Button
         title="Iniciar Sesión"
         onPress={handleLogin}
-        disabled={isLoading || !email || !password}
+        loading={isSubmitting}
+        disabled={isSubmitting || !email || !password}
       />
 
       <Text 

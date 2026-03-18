@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "expo-router";
 import { View, Text, StyleSheet } from "react-native"
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getUserData, signup } from "@/backend/user-functions";
+import { signup } from "@/backend/user-functions";
 import { LIGHT_THEME } from "@/constants/theme";
 
 export default function SignupPage() {
@@ -15,24 +15,16 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState<string>("");
 
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    async function checkUser() {
-      const user = await getUserData();
-      if (user) router.push("/");
-      
-      setIsLoading(false);
-    }
-
-    checkUser();
-  }, []);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const handleSignup = async () => {
+    setIsSubmitting(true);
+
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden");
       setTimeout(() => setError(null), 5000);
       setConfirmPassword("");
+      setIsSubmitting(false);
       return;
     }
 
@@ -45,8 +37,10 @@ export default function SignupPage() {
 
       setTimeout(() => setError(null), 5000);
     } else {
-      router.push("/");
+      router.replace("/(tabs)");
     }
+
+    setIsSubmitting(false);
   };
 
   return (
@@ -85,7 +79,8 @@ export default function SignupPage() {
       <Button
         title="Registrate"
         onPress={handleSignup}
-        disabled={isLoading || !email || !password}
+        loading={isSubmitting}
+        disabled={isSubmitting || !email || !password}
       />
 
       <Text 
