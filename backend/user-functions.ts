@@ -6,6 +6,10 @@ export interface EncryptedClaveItem {
   dato_encriptado: string;
   emisor_id?: string;
   receptor_id?: string;
+  emisor_nombre?: string;
+  emisor_correo?: string;
+  receptor_nombre?: string;
+  receptor_correo?: string;
   max_vistas?: number;
   vistas_usadas?: number;
   fecha_caducidad?: string | null;
@@ -320,8 +324,48 @@ export async function getEncryptedDatos() {
     };
   }
 
+  const rows = (data ?? []) as EncryptedClaveItem[];
+  const userIds = Array.from(
+    new Set(rows.flatMap((item) => [item.emisor_id, item.receptor_id]).filter((id): id is string => Boolean(id)))
+  );
+
+  if (userIds.length === 0) {
+    return {
+      data: rows,
+      error: null,
+    };
+  }
+
+  const { data: usersData, error: usersError } = await supabase
+    .from("usuario")
+    .select("id, nombre, correo")
+    .in("id", userIds);
+
+  if (usersError) {
+    return {
+      data: rows,
+      error: null,
+    };
+  }
+
+  const usersById = new Map(
+    (usersData ?? []).map((user) => [
+      user.id as string,
+      {
+        nombre: ((user.nombre as string | null) ?? "").trim() || "Usuario",
+        correo: ((user.correo as string | null) ?? "").trim(),
+      },
+    ])
+  );
+
   return {
-    data: (data ?? []) as EncryptedClaveItem[],
+    data: rows.map((item) => ({
+      ...item,
+      emisor_nombre: item.emisor_id ? usersById.get(item.emisor_id)?.nombre || "Usuario" : "Usuario",
+      emisor_correo: item.emisor_id ? usersById.get(item.emisor_id)?.correo || "" : "",
+      receptor_nombre: item.receptor_id ? usersById.get(item.receptor_id)?.nombre || "Usuario" : "Usuario",
+      receptor_correo: item.receptor_id ? usersById.get(item.receptor_id)?.correo || "" : "",
+    })) as EncryptedClaveItem[],
     error: null,
   };
 }

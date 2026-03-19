@@ -1,5 +1,16 @@
-import { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  FlatList,
+  PanResponder,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import * as CryptoJS from "crypto-js";
@@ -69,6 +80,18 @@ export default function MisClavesScreen() {
     setEditDatoPlano("");
     setLoading(false);
   }, []);
+
+  const isClaveExpired = (item: EncryptedClaveItem): boolean => {
+    const now = new Date();
+    if (item.fecha_caducidad) {
+      const expiryDate = new Date(item.fecha_caducidad);
+      if (now > expiryDate) return true;
+    }
+    const usedViews = item.vistas_usadas ?? 0;
+    const maxViews = item.max_vistas ?? 1;
+    if (usedViews >= maxViews) return true;
+    return false;
+  };
 
   const visibleItems = items.filter((item) => {
     if (!myUserId) return true;
@@ -271,10 +294,14 @@ export default function MisClavesScreen() {
       </View>
 
       <TouchableOpacity style={styles.refreshButton} onPress={loadDatos} disabled={loading}>
-        <Text style={styles.refreshButtonText}>{loading ? "Cargando..." : "Cargar datos"}</Text>
+        <View style={styles.refreshButtonContent}>
+          {loading ? <ActivityIndicator size="small" color="#fff" /> : null}
+          <Text style={[styles.refreshButtonText, loading && styles.refreshButtonLoadingText]}>
+            {loading ? "Cargando..." : "Cargar datos"}
+          </Text>
+        </View>
       </TouchableOpacity>
 
-      {loading ? <ActivityIndicator style={{ marginTop: 16 }} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {toast ? (
         <View style={[styles.toast, toast.type === "success" ? styles.toastSuccess : styles.toastError]}>
@@ -288,75 +315,235 @@ export default function MisClavesScreen() {
         contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight + 16 }]}
         ListEmptyComponent={!loading ? <Text style={styles.empty}>Sin datos todavía.</Text> : null}
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.titulo ?? "Clave"}</Text>
-            <Text numberOfLines={2} style={styles.cardEncrypted}>
-              {item.dato_encriptado}
-            </Text>
-            <Text style={styles.cardDate}>{new Date(item.created_at).toLocaleString()}</Text>
-            {item.fecha_caducidad ? (
-              <Text style={styles.expiryInfo}>Caduca: {new Date(item.fecha_caducidad).toLocaleString()}</Text>
-            ) : (
-              <Text style={styles.expiryInfo}>Sin caducidad</Text>
-            )}
-            <Text style={styles.viewsInfo}>
-              Vistas: {item.vistas_usadas ?? 0} / {item.max_vistas ?? 1}
-            </Text>
-
-            <View style={styles.actionsRow}>
-              <TouchableOpacity style={styles.decryptButton} onPress={() => handleDecrypt(item)}>
-                <Text style={styles.decryptButtonText}>Desencriptar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.editButton} onPress={() => handleStartEdit(item)}>
-                <Text style={styles.actionText}>Editar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteButton} onPress={() => handleConfirmDelete(item)}>
-                <Text style={styles.actionText}>Eliminar</Text>
-              </TouchableOpacity>
-            </View>
-
-            {editingId === item.id ? (
-              <View style={styles.editBox}>
-                <TextInput
-                  value={editTitulo}
-                  onChangeText={setEditTitulo}
-                  placeholder="Titulo"
-                  style={styles.input}
-                />
-                <TextInput
-                  value={editDatoPlano}
-                  onChangeText={setEditDatoPlano}
-                  placeholder="Dato en texto plano"
-                  style={styles.input}
-                />
-
-                <View style={styles.editActionsRow}>
-                  <TouchableOpacity style={styles.saveButton} onPress={() => handleSaveEdit(item)}>
-                    <Text style={styles.actionText}>
-                      {actionLoadingId === item.id ? "Guardando..." : "Guardar"}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit}>
-                    <Text style={styles.actionText}>Cancelar</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : null}
-
-            {selectedId === item.id ? (
-              <View style={styles.decryptedBox}>
-                <Text style={styles.decryptedLabel}>Texto plano:</Text>
-                <Text selectable style={styles.decryptedText}>
-                  {selectedDecrypted}
-                </Text>
-              </View>
-            ) : null}
-          </View>
+          <SwipeableCard
+            item={item}
+            isExpired={isClaveExpired(item)}
+                        activeFilter={activeFilter}
+                        myUserId={myUserId}
+            selectedId={selectedId}
+            editingId={editingId}
+            selectedDecrypted={selectedDecrypted}
+            editTitulo={editTitulo}
+            editDatoPlano={editDatoPlano}
+            actionLoadingId={actionLoadingId}
+            onDecrypt={handleDecrypt}
+            onStartEdit={handleStartEdit}
+            onCancelEdit={handleCancelEdit}
+            onSaveEdit={handleSaveEdit}
+            onConfirmDelete={handleConfirmDelete}
+            onEditTituloChange={setEditTitulo}
+            onEditDatoChange={setEditDatoPlano}
+          />
         )}
       />
     </View>
   );
 }
+
+interface SwipeableCardProps {
+  item: EncryptedClaveItem;
+  isExpired: boolean;
+    activeFilter: "enviadas" | "recibidas";
+    myUserId: string;
+  selectedId: string | null;
+  editingId: string | null;
+  selectedDecrypted: string;
+  editTitulo: string;
+  editDatoPlano: string;
+  actionLoadingId: string | null;
+  onDecrypt: (item: EncryptedClaveItem) => void;
+  onStartEdit: (item: EncryptedClaveItem) => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (item: EncryptedClaveItem) => void;
+  onConfirmDelete: (item: EncryptedClaveItem) => void;
+  onEditTituloChange: (text: string) => void;
+  onEditDatoChange: (text: string) => void;
+}
+
+const SwipeableCard = ({
+  item,
+  isExpired,
+    activeFilter,
+    myUserId,
+  selectedId,
+  editingId,
+  selectedDecrypted,
+  editTitulo,
+  editDatoPlano,
+  actionLoadingId,
+  onDecrypt,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
+  onConfirmDelete,
+  onEditTituloChange,
+  onEditDatoChange,
+}: SwipeableCardProps) => {
+  const pan = useRef(new Animated.ValueXY()).current;
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resetSwipe = useCallback(() => {
+    Animated.timing(pan.x, {
+      toValue: 0,
+      duration: 600,
+      useNativeDriver: false,
+    }).start();
+  }, [pan]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, { dx }) => Math.abs(dx) > 10 && (dx < 0 || !isExpired),
+      onPanResponderMove: (_, { dx }) => {
+        if (dx < 0) {
+          pan.x.setValue(Math.max(dx, -100));
+        } else if (dx > 0 && !isExpired) {
+          pan.x.setValue(Math.min(dx, 100));
+        }
+      },
+      onPanResponderRelease: (_, { dx }) => {
+        if (dx < -100) {
+          Animated.spring(pan.x, {
+            toValue: -100,
+            useNativeDriver: false,
+          }).start();
+        } else if (dx > 100 && !isExpired) {
+          Animated.spring(pan.x, {
+            toValue: 100,
+            useNativeDriver: false,
+          }).start();
+        } else {
+          Animated.timing(pan.x, {
+            toValue: 0,
+            duration: 600,
+            useNativeDriver: false,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    const listenerId = pan.x.addListener(({ value }) => {
+      if (Math.abs(value) === 100) {
+        if (autoCloseTimerRef.current) {
+          clearTimeout(autoCloseTimerRef.current);
+        }
+        autoCloseTimerRef.current = setTimeout(() => {
+          resetSwipe();
+        }, 1200);
+      } else if (Math.abs(value) < 100) {
+        if (autoCloseTimerRef.current) {
+          clearTimeout(autoCloseTimerRef.current);
+          autoCloseTimerRef.current = null;
+        }
+      }
+    });
+
+    return () => {
+      pan.x.removeListener(listenerId);
+      if (autoCloseTimerRef.current) {
+        clearTimeout(autoCloseTimerRef.current);
+      }
+    };
+  }, [pan, resetSwipe]);
+
+  const handleDelete = () => {
+    resetSwipe();
+    onConfirmDelete(item);
+  };
+
+  const handleEdit = () => {
+    resetSwipe();
+    onStartEdit(item);
+  };
+
+  return (
+    <View style={styles.swipeContainer}>
+      <Animated.View
+        style={[
+          styles.card,
+          isExpired && styles.cardDisabled,
+          { transform: [{ translateX: pan.x }], zIndex: 1 },
+        ]}
+        {...panResponder.panHandlers}
+      >
+        <Text style={[styles.cardTitle, isExpired && styles.cardTitleDisabled]}>{item.titulo ?? "Clave"}</Text>
+        <Text numberOfLines={2} style={[styles.cardEncrypted, isExpired && styles.cardEncryptedDisabled]}>
+          {activeFilter === "recibidas"
+            ? `De: ${item.emisor_nombre || "Usuario"}${item.emisor_correo ? ` (${item.emisor_correo})` : ""}`
+            : `Para: ${item.receptor_nombre || "Usuario"}${item.receptor_correo ? ` (${item.receptor_correo})` : ""}`}
+        </Text>
+        <Text style={[styles.cardDate, isExpired && { opacity: 0.5 }]}>{new Date(item.created_at).toLocaleString()}</Text>
+        {item.fecha_caducidad ? (
+          <Text style={[styles.expiryInfo, isExpired ? styles.expiryInfoExpired : styles.expiryInfoActive]}>Caduca: {new Date(item.fecha_caducidad).toLocaleString()}</Text>
+        ) : (
+          <Text style={[styles.expiryInfo, isExpired ? styles.expiryInfoExpired : styles.expiryInfoActive]}>Sin caducidad</Text>
+        )}
+        <Text style={[styles.viewsInfo, isExpired && { opacity: 0.5 }]}>
+          Vistas: {item.vistas_usadas ?? 0} / {item.max_vistas ?? 1}
+        </Text>
+
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={[styles.decryptButton, isExpired && styles.buttonDisabled, styles.decryptButtonExpanded]}
+            onPress={() => onDecrypt(item)}
+            disabled={isExpired}
+          >
+            <Text style={styles.decryptButtonText}>Desencriptar</Text>
+          </TouchableOpacity>
+        </View>
+
+        {editingId === item.id ? (
+          <View style={styles.editBox}>
+            <TextInput
+              value={editTitulo}
+              onChangeText={onEditTituloChange}
+              placeholder="Titulo"
+              style={styles.input}
+            />
+            <TextInput
+              value={editDatoPlano}
+              onChangeText={onEditDatoChange}
+              placeholder="Dato en texto plano"
+              style={styles.input}
+            />
+
+            <View style={styles.editActionsRow}>
+              <TouchableOpacity style={styles.saveButton} onPress={() => onSaveEdit(item)}>
+                <Text style={styles.actionText}>
+                  {actionLoadingId === item.id ? "Guardando..." : "Guardar"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelButton} onPress={onCancelEdit}>
+                <Text style={styles.actionText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
+
+        {selectedId === item.id ? (
+          <View style={styles.decryptedBox}>
+            <Text style={styles.decryptedLabel}>Texto plano:</Text>
+            <Text selectable style={styles.decryptedText}>
+              {selectedDecrypted}
+            </Text>
+          </View>
+        ) : null}
+      </Animated.View>
+      <View style={[styles.swipeEditBackground, isExpired && { display: "none" }]}>
+        <TouchableOpacity style={[styles.swipeEditButton, { opacity: 1 }]} onPress={handleEdit}>
+          <Text style={styles.swipeEditText}>Editar</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.swipeDeleteBackground}>
+        <TouchableOpacity style={[styles.swipeDeleteButton, { opacity: 1 }]} onPress={handleDelete}>
+          <Text style={styles.swipeDeleteText}>Eliminar</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -400,9 +587,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: "center",
   },
+  refreshButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   refreshButtonText: {
     color: "#fff",
     fontWeight: "600",
+  },
+  refreshButtonLoadingText: {
+    marginLeft: 8,
   },
   list: {
     paddingVertical: 12,
@@ -418,15 +612,29 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     backgroundColor: "#f9fafb",
+    width: "100%",
+  },
+  cardDisabled: {
+    opacity: 1,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: "600",
+    textDecorationLine: "none",
+  },
+  cardTitleDisabled: {
+    opacity: 0.5,
   },
   cardEncrypted: {
     marginTop: 8,
     color: "#374151",
     fontSize: 12,
+  },
+  cardEncryptedDisabled: {
+    opacity: 0.5,
   },
   cardDate: {
     marginTop: 8,
@@ -442,16 +650,25 @@ const styles = StyleSheet.create({
   expiryInfo: {
     marginTop: 4,
     fontSize: 12,
-    color: "#7c2d12",
     fontWeight: "500",
+  },
+  expiryInfoExpired: {
+    color: "#991b1b",
+  },
+  expiryInfoActive: {
+    color: "#0f6b2f",
   },
   decryptButton: {
     marginTop: 10,
     backgroundColor: "#0f766e",
     borderRadius: 8,
-    paddingVertical: 8,
+    paddingVertical: 12,
     paddingHorizontal: 10,
     alignItems: "center",
+    justifyContent: "center",
+  },
+  decryptButtonExpanded: {
+    flex: 1,
   },
   actionsRow: {
     marginTop: 8,
@@ -555,5 +772,60 @@ const styles = StyleSheet.create({
   toastText: {
     color: "#111827",
     fontWeight: "500",
+  },
+  swipeContainer: {
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: 12,
+  },
+  swipeDeleteBackground: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 100,
+    backgroundColor: "#b91c1c",
+    borderRadius: 12,
+    zIndex: 0,
+  },
+  swipeDeleteButton: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 100,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 8,
+  },
+  swipeDeleteText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  swipeEditBackground: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 100,
+    backgroundColor: "#1d4ed8",
+    borderRadius: 12,
+    zIndex: 0,
+  },
+  swipeEditButton: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 100,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 8,
+  },
+  swipeEditText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 13,
   },
 });

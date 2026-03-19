@@ -1,14 +1,21 @@
 import 'react-native-get-random-values';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Eraser } from 'lucide-react-native';
 import * as CryptoJS from 'crypto-js';
 import { getUserTargetOptions, saveEncryptedDato, UserTargetOption } from '@/backend/user-functions';
 
 const IngresarDato = () => {
+  const MAX_TITULO_LENGTH = 80;
+  const MAX_CLAVE_LENGTH = 280;
+
   const [titulo, setTitulo] = useState('');
   const [receptorId, setReceptorId] = useState('');
   const [maxVistas, setMaxVistas] = useState('1');
   const [fechaCaducidad, setFechaCaducidad] = useState('');
+  const [fechaCaducidadDate, setFechaCaducidadDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [dato, setDato] = useState('');
   const [targetSearch, setTargetSearch] = useState('');
   const [targetOptions, setTargetOptions] = useState<UserTargetOption[]>([]);
@@ -50,6 +57,86 @@ const IngresarDato = () => {
     });
   }, [targetOptions, targetSearch]);
 
+  const formatDateYMD = (date: Date) => {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getCounterColor = (current: number, max: number) => {
+    const ratio = current / max;
+    if (ratio <= 0.8) return '#15803d';
+    if (ratio <= 0.9) return '#ca8a04';
+    return '#dc2626';
+  };
+
+  const parsedMaxVistasLive = Number.parseInt(maxVistas, 10);
+  const vistasFueraDeRango =
+    maxVistas.trim().length > 0 &&
+    (!Number.isFinite(parsedMaxVistasLive) || parsedMaxVistasLive < 1 || parsedMaxVistasLive > 99);
+
+  const handleMaxVistasChange = (value: string) => {
+    const digitsOnly = value.replace(/[^0-9]/g, '');
+    setMaxVistas(digitsOnly);
+  };
+
+  const handleClearForm = () => {
+    setTitulo('');
+    setReceptorId('');
+    setMaxVistas('1');
+    setFechaCaducidad('');
+    setFechaCaducidadDate(null);
+    setShowDatePicker(false);
+    setDato('');
+    setTargetSearch('');
+    setShowTargets(false);
+    setMensaje('');
+  };
+
+  const handleClearFormPress = () => {
+    const hasContent =
+      titulo.trim().length > 0 ||
+      receptorId.trim().length > 0 ||
+      maxVistas.trim() !== '1' ||
+      fechaCaducidad.trim().length > 0 ||
+      dato.trim().length > 0 ||
+      targetSearch.trim().length > 0;
+
+    if (!hasContent) {
+      return;
+    }
+
+    Alert.alert(
+      'Limpiar formulario',
+      'Se eliminarán los datos capturados. ¿Deseas continuar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Limpiar',
+          style: 'destructive',
+          onPress: handleClearForm,
+        },
+      ]
+    );
+  };
+
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (event.type === 'dismissed') {
+      setShowDatePicker(false);
+      return;
+    }
+
+    if (selectedDate) {
+      setFechaCaducidadDate(selectedDate);
+      setFechaCaducidad(formatDateYMD(selectedDate));
+    }
+
+    if (Platform.OS !== 'ios') {
+      setShowDatePicker(false);
+    }
+  };
+
   useEffect(() => {
     if (!mensaje) return;
     const timeout = setTimeout(() => {
@@ -67,6 +154,30 @@ const IngresarDato = () => {
       if (!dato.trim()) {
         setMensajeTipo('error');
         setMensaje('Ingresa una clave antes de continuar.');
+        return;
+      }
+
+      if (dato.trim().length > MAX_CLAVE_LENGTH) {
+        setMensajeTipo('error');
+        setMensaje(`La clave no puede superar ${MAX_CLAVE_LENGTH} caracteres.`);
+        return;
+      }
+
+      if (!receptorId.trim()) {
+        setMensajeTipo('error');
+        setMensaje('Selecciona un usuario destino antes de guardar.');
+        return;
+      }
+
+      if (!maxVistas.trim()) {
+        setMensajeTipo('error');
+        setMensaje('Ingresa la cantidad de visualizaciones permitidas.');
+        return;
+      }
+
+      if (titulo.trim().length > MAX_TITULO_LENGTH) {
+        setMensajeTipo('error');
+        setMensaje(`El titulo no puede superar ${MAX_TITULO_LENGTH} caracteres.`);
         return;
       }
 
@@ -90,15 +201,15 @@ const IngresarDato = () => {
         return;
       }
 
+      if (parsedMaxVistas > 99) {
+        setMensajeTipo('error');
+        setMensaje('La cantidad de visualizaciones no puede ser mayor a 99.');
+        return;
+      }
+
       let normalizedCaducidad: string | null = null;
-      if (fechaCaducidad.trim()) {
-        const candidate = new Date(fechaCaducidad.trim());
-        if (Number.isNaN(candidate.getTime())) {
-          setMensajeTipo('error');
-          setMensaje('Fecha de caducidad inválida. Usa formato YYYY-MM-DD');
-          return;
-        }
-        normalizedCaducidad = candidate.toISOString();
+      if (fechaCaducidadDate) {
+        normalizedCaducidad = fechaCaducidadDate.toISOString();
       }
 
       const { success, error } = await saveEncryptedDato(
@@ -120,6 +231,7 @@ const IngresarDato = () => {
       setReceptorId('');
       setMaxVistas('1');
       setFechaCaducidad('');
+      setFechaCaducidadDate(null);
       setDato('');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error inesperado';
@@ -147,17 +259,27 @@ const IngresarDato = () => {
           value={titulo}
           onChangeText={setTitulo}
           placeholder="Titulo (opcional)"
+          maxLength={MAX_TITULO_LENGTH}
           style={styles.input}
         />
+        <Text style={[styles.charCounter, styles.charCounterAfterTitle, { color: getCounterColor(titulo.length, MAX_TITULO_LENGTH) }]}>
+          {titulo.length}/{MAX_TITULO_LENGTH}
+        </Text>
 
         <Text style={styles.sectionTitle}>Destino</Text>
-        <Pressable style={styles.selectorButton} onPress={() => setShowTargets((prev) => !prev)}>
+        <Pressable
+          style={[
+            styles.selectorButton,
+            selectedTarget && styles.selectorButtonSelected,
+          ]}
+          onPress={() => setShowTargets((prev) => !prev)}
+        >
           <Text style={styles.selectorButtonText}>
             {selectedTarget
-              ? `Destino: ${selectedTarget.nombre}${selectedTarget.correo ? ` (${selectedTarget.correo})` : ''}`
+              ? `${selectedTarget.nombre}${selectedTarget.correo ? ` (${selectedTarget.correo})` : ''}`
               : 'Seleccionar usuario destino'}
           </Text>
-          <Text style={styles.selectorButtonHint}>{showTargets ? 'Ocultar' : 'Ver lista'}</Text>
+          <Text style={styles.selectorButtonHint}>{showTargets ? 'Ocultar lista' : 'Ver lista'}</Text>
         </Pressable>
 
         {showTargets ? (
@@ -177,46 +299,64 @@ const IngresarDato = () => {
             {!loadingTargets && targetOptions.length > 0 && filteredTargets.length === 0 ? (
               <Text style={styles.targetHint}>Sin resultados para esa busqueda.</Text>
             ) : null}
-            {filteredTargets.map((option) => (
-              <Pressable
-                key={option.id}
-                style={styles.targetItem}
-                onPress={() => {
-                  setReceptorId(option.id);
-                  setShowTargets(false);
-                  setTargetSearch('');
-                }}
-              >
-                <Text style={styles.targetName}>{option.nombre}</Text>
-                {option.correo ? <Text style={styles.targetEmail}>{option.correo}</Text> : null}
-              </Pressable>
-            ))}
+            <ScrollView style={styles.targetsList} nestedScrollEnabled>
+              {filteredTargets.map((option) => (
+                <Pressable
+                  key={option.id}
+                  style={styles.targetItem}
+                  onPress={() => {
+                    setReceptorId(option.id);
+                    setShowTargets(false);
+                    setTargetSearch('');
+                  }}
+                >
+                  <Text style={styles.targetName}>{option.nombre}</Text>
+                  {option.correo ? <Text style={styles.targetEmail}>{option.correo}</Text> : null}
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
         ) : null}
 
         <View style={styles.rowFields}>
           <View style={styles.fieldHalf}>
-            <Text style={styles.fieldLabel}>Visualizaciones</Text>
+            <Text style={styles.fieldLabel}>Cantidad de Vistas</Text>
             <TextInput
               value={maxVistas}
-              onChangeText={setMaxVistas}
+              onChangeText={handleMaxVistasChange}
               placeholder="Vistas"
               keyboardType="number-pad"
+              maxLength={2}
               style={styles.input}
             />
-            <Text style={styles.inlineHint}>Cantidad de Vistas.</Text>
+            <Text style={[styles.inlineHint, vistasFueraDeRango && styles.inlineHintError]}>
+              {vistasFueraDeRango ? 'Solo valores entre 1 y 99.' : 'Rango permitido: 1-99.'}
+            </Text>
           </View>
           <View style={styles.fieldHalf}>
             <Text style={styles.fieldLabel}>Caducidad</Text>
-            <TextInput
-              value={fechaCaducidad}
-              onChangeText={setFechaCaducidad}
-              placeholder="YYYY-MM-DD"
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={styles.input}
-            />
-            <Text style={styles.inlineHint}>Sin fecha, no se caduca.</Text>
+            <Pressable style={styles.dateInput} onPress={() => setShowDatePicker(true)}>
+              <Text style={fechaCaducidad ? styles.dateValueText : styles.datePlaceholderText}>
+                {fechaCaducidad || 'Seleccionar fecha'}
+              </Text>
+            </Pressable>
+            {showDatePicker ? (
+              <DateTimePicker
+                value={fechaCaducidadDate ?? new Date()}
+                mode="date"
+                display="default"
+                minimumDate={new Date()}
+                onChange={handleDateChange}
+              />
+            ) : null}
+            {fechaCaducidad ? (
+              <Pressable onPress={() => {
+                setFechaCaducidad('');
+                setFechaCaducidadDate(null);
+              }}>
+                <Text style={styles.dateClearText}>Quitar fecha</Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
 
@@ -228,20 +368,33 @@ const IngresarDato = () => {
           secureTextEntry
           autoCapitalize="none"
           autoCorrect={false}
+          maxLength={MAX_CLAVE_LENGTH}
           style={styles.input}
         />
+        <Text style={[styles.charCounter, { color: getCounterColor(dato.length, MAX_CLAVE_LENGTH) }]}>
+          {dato.length}/{MAX_CLAVE_LENGTH}
+        </Text>
 
-        <Pressable
-          onPress={handleSubmit}
-          disabled={loading}
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-        >
-          {loading ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.submitText}>Encriptar y Subir</Text>}
-        </Pressable>
+        <View style={styles.submitRow}>
+          <Pressable
+            onPress={handleSubmit}
+            disabled={loading}
+            style={[styles.submitButton, styles.submitButtonGrow, loading && styles.submitButtonDisabled]}
+          >
+            {loading ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.submitText}>Encriptar y Subir</Text>}
+          </Pressable>
+          <Pressable
+            onPress={handleClearFormPress}
+            disabled={loading}
+            accessibilityLabel="Limpiar formulario"
+            style={[styles.clearSideButton, loading && styles.submitButtonDisabled]}
+          >
+            <Eraser size={16} color="#b91c1c" />
+          </Pressable>
+        </View>
 
         <View style={styles.helpPanel}>
-          <Text style={styles.helpText}>Si no seleccionas usuario, se guardará para ti mismo.</Text>
-          <Text style={styles.helpText}>La fecha acepta formato YYYY-MM-DD.</Text>
+          <Text style={styles.helpText}>La fecha es opcional: sin fecha, la clave no caduca.</Text>
         </View>
 
         {mensaje ? <Text style={[styles.mensaje, mensajeTipo === 'success' ? styles.ok : styles.fail]}>{mensaje}</Text> : null}
@@ -320,6 +473,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 10,
   },
+  selectorButtonSelected: {
+    backgroundColor: '#dcfce7',
+    borderColor: '#15803d',
+  },
   selectorButtonText: {
     color: '#0f172a',
     fontWeight: '600',
@@ -360,6 +517,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#bfdbfe',
   },
+  targetsList: {
+    maxHeight: 104,
+  },
   targetName: {
     color: '#0f172a',
     fontWeight: '600',
@@ -389,6 +549,42 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontSize: 12,
   },
+  inlineHintError: {
+    color: '#b91c1c',
+    fontWeight: '600',
+  },
+  charCounter: {
+    marginTop: -8,
+    marginBottom: 10,
+    alignSelf: 'flex-end',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  charCounterAfterTitle: {
+    marginBottom: -15,
+  },
+  dateInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    marginBottom: 6,
+    backgroundColor: '#f8fafc',
+  },
+  dateValueText: {
+    color: '#0f172a',
+  },
+  datePlaceholderText: {
+    color: '#94a3b8',
+  },
+  dateClearText: {
+    marginBottom: 6,
+    color: '#0f766e',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   submitButton: {
     marginTop: 4,
     borderRadius: 12,
@@ -399,6 +595,25 @@ const styles = StyleSheet.create({
   },
   submitButtonDisabled: {
     opacity: 0.7,
+  },
+  submitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  submitButtonGrow: {
+    flex: 1,
+  },
+  clearSideButton: {
+    marginTop: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
   },
   submitText: {
     color: '#ffffff',
