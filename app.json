@@ -41,7 +41,11 @@
     },
     "owner": "lab-dismov",
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/dc91d555-2d87-493c-9562-7a303677cc32"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }
