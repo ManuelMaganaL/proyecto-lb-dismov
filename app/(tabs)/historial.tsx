@@ -382,6 +382,7 @@ const SwipeableCard = ({
   const pan = useRef(new Animated.ValueXY()).current;
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canEdit = activeFilter === "enviadas" && !isExpired;
+  const canDelete = activeFilter === "enviadas" && !isExpired;
 
   const resetSwipe = useCallback(() => {
     Animated.timing(pan.x, {
@@ -468,7 +469,7 @@ const SwipeableCard = ({
           isExpired && styles.cardDisabled,
           { transform: [{ translateX: pan.x }], zIndex: 1 },
         ]}
-        {...panResponder.panHandlers}
+        {...((canEdit || canDelete) ? panResponder.panHandlers : {})}
       >
         <Text style={[styles.cardTitle, isExpired && styles.cardTitleDisabled]}>{item.titulo ?? "Clave"}</Text>
         <Text numberOfLines={2} style={[styles.cardEncrypted, isExpired && styles.cardEncryptedDisabled]}>
@@ -482,21 +483,24 @@ const SwipeableCard = ({
         ) : (
           <Text style={[styles.expiryInfo, isExpired ? styles.expiryInfoExpired : styles.expiryInfoActive]}>Sin caducidad</Text>
         )}
-        <Text style={[styles.viewsInfo, isExpired && { opacity: 0.5 }]}>
+        <Text style={[styles.viewsInfo, isExpired && { opacity: 0.5 }]}> 
           Vistas: {item.vistas_usadas ?? 0} / {item.max_vistas ?? 1}
         </Text>
 
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={[styles.decryptButton, isExpired && styles.buttonDisabled, styles.decryptButtonExpanded]}
-            onPress={() => onDecrypt(item)}
-            disabled={isExpired}
-          >
-            <Text style={styles.decryptButtonText}>Desencriptar</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Ocultar botón Desencriptar si está expirada */}
+        {!isExpired && (
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={[styles.decryptButton, styles.decryptButtonExpanded]}
+              onPress={() => onDecrypt(item)}
+            >
+              <Text style={styles.decryptButtonText}>Desencriptar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-        {editingId === item.id ? (
+        {/* Solo mostrar edición si es enviadas */}
+        {canEdit && editingId === item.id ? (
           <View style={styles.editBox}>
             <TextInput
               value={editTitulo}
@@ -533,16 +537,22 @@ const SwipeableCard = ({
           </View>
         ) : null}
       </Animated.View>
-      <View style={[styles.swipeEditBackground, !canEdit && { display: "none" }]}>
-        <TouchableOpacity style={[styles.swipeEditButton, { opacity: 1 }]} onPress={handleEdit}>
-          <Text style={styles.swipeEditText}>Editar</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.swipeDeleteBackground}>
-        <TouchableOpacity style={[styles.swipeDeleteButton, { opacity: 1 }]} onPress={handleDelete}>
-          <Text style={styles.swipeDeleteText}>Eliminar</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Solo mostrar swipe de editar si es enviadas */}
+      {canEdit && (
+        <View style={styles.swipeEditBackground}>
+          <TouchableOpacity style={[styles.swipeEditButton, { opacity: 1 }]} onPress={handleEdit}>
+            <Text style={styles.swipeEditText}>Editar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {/* Solo mostrar swipe de eliminar si es enviadas */}
+      {canDelete && (
+        <View style={styles.swipeDeleteBackground}>
+          <TouchableOpacity style={[styles.swipeDeleteButton, { opacity: 1 }]} onPress={handleDelete}>
+            <Text style={styles.swipeDeleteText}>Eliminar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
