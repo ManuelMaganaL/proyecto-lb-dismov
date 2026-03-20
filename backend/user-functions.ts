@@ -1,4 +1,6 @@
 import { supabase } from "@/backend/supabase/client";
+import * as FileSystem from "expo-file-system/legacy";
+import { decode } from "base64-arraybuffer";
 
 export interface EncryptedClaveItem {
   id: string;
@@ -38,6 +40,40 @@ interface ProfileUpdatePayload {
   fullName?: string;
   avatarUrl?: string;
   password?: string;
+}
+
+interface AvatarUploadPayload {
+  fileUri: string;
+  fileName?: string;
+  mimeType?: string;
+}
+
+interface AvatarUploadResult {
+  publicUrl: string | null;
+  error: string | null;
+}
+
+function inferImageContentType(fileName?: string, mimeType?: string): string {
+  if (mimeType?.startsWith("image/")) {
+    return mimeType;
+  }
+
+  const normalizedName = (fileName ?? "").toLowerCase();
+
+  if (normalizedName.endsWith(".png")) return "image/png";
+  if (normalizedName.endsWith(".webp")) return "image/webp";
+  if (normalizedName.endsWith(".heic")) return "image/heic";
+  if (normalizedName.endsWith(".heif")) return "image/heif";
+
+  return "image/jpeg";
+}
+
+function inferFileExtension(contentType: string): string {
+  if (contentType === "image/png") return "png";
+  if (contentType === "image/webp") return "webp";
+  if (contentType === "image/heic") return "heic";
+  if (contentType === "image/heif") return "heif";
+  return "jpg";
 }
 
 // Obtiene informacion del usuario
@@ -123,6 +159,63 @@ export async function getProfileData() {
     } as ProfileData,
     error: null,
   };
+}
+
+export async function uploadProfileAvatar(payload: AvatarUploadPayload): Promise<AvatarUploadResult> {
+  const user = await getUserData();
+
+  if (!user) {
+    return {
+      publicUrl: null,
+      error: "No hay sesión activa.",
+    };
+  }
+
+  try {
+    const fileBase64 = await FileSystem.readAsStringAsync(payload.fileUri, {
+      // Some Expo runtimes do not expose EncodingType consistently.
+      encoding: "base64" as never,
+    });
+    const fileBuffer = decode(fileBase64);
+    const contentType = inferImageContentType(payload.fileName, payload.mimeType);
+    const extension = inferFileExtension(contentType);
+    const bucket = process.env.EXPO_PUBLIC_SUPABASE_AVATARS_BUCKET || "avatars";
+    const path = `${user.id}/avatar-${Date.now()}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(bucket)
+      .upload(path, fileBuffer, {
+        contentType,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      return {
+        publicUrl: null,
+        error: uploadError.message,
+      };
+    }
+
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+
+    if (!data.publicUrl) {
+      return {
+        publicUrl: null,
+        error: "No se pudo generar la URL pública del avatar.",
+      };
+    }
+
+    return {
+      publicUrl: data.publicUrl,
+      error: null,
+    };
+  } catch (error) {
+    const detailedMessage = error instanceof Error ? error.message : "Error desconocido al leer el archivo.";
+    return {
+      publicUrl: null,
+      error: `Ocurrió un error al subir la imagen de perfil: ${detailedMessage}`,
+    };
+  }
 }
 
 export async function updateProfileData(payload: ProfileUpdatePayload): Promise<ActionResult> {
