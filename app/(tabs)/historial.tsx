@@ -21,7 +21,7 @@ import {
   EncryptedClaveItem,
   getEncryptedDatos,
   updateEncryptedDato,
-} from "@/backend/user-functions";
+} from "@/backend/crypt-functions";
 import { getUserData } from "@/backend/auth-functions";
 
 export default function MisClavesScreen() {

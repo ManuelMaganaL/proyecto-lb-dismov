@@ -4,7 +4,7 @@ import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, 
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Eraser } from 'lucide-react-native';
 import * as CryptoJS from 'crypto-js';
-import { getUserTargetOptions, saveEncryptedDato, UserTargetOption } from '@/backend/user-functions';
+import { getUserTargetOptions, saveEncryptedDato, UserTargetOption } from '@/backend/crypt-functions';
 
 const IngresarDato = () => {
   const MAX_TITULO_LENGTH = 80;

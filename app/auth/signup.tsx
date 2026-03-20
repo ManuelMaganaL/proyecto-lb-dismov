@@ -6,7 +6,7 @@ import { useTheme } from "@/context/theme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { signup } from "@/backend/auth-functions";
+import { getUserData, signup } from "@/backend/auth-functions";
 import { validateEmail } from "@/utils/form-validation";
 
 
@@ -28,7 +28,13 @@ export default function SignupPage() {
 
 
   useEffect(() => {
-
+    const checkUser = async () => {
+      const user = await getUserData();
+      if (user) {
+        router.replace("/(tabs)");
+      }
+    }
+    checkUser();
   }, [])
 
 
