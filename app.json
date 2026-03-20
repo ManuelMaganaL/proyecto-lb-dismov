@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "proyecto-lb-dismov",
-    "slug": "proyecto-lb-dismov",
+    "name": "Crypto Share",
+    "slug": "crypto-share",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -22,7 +22,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.x1hhh5.proyectolbdismov"
+      "package": "com.labdismov.miapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
