@@ -8,9 +8,9 @@ import {
   ViewStyle,
 } from "react-native";
 
-import { LIGHT_THEME } from "@/constants/theme";
+import { useTheme } from "@/context/theme";
 
-export type ButtonVariant = "main" | "secondary" | "outline";
+export type ButtonVariant = "main" | "secondary" | "outline" | "danger";
 
 export interface ButtonProps extends TouchableOpacityProps {
   title: string;
@@ -30,6 +30,9 @@ export function Button({
   textStyle,
   ...rest
 }: ButtonProps) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   const isDisabled = disabled || loading;
 
   const containerStyles = [
@@ -37,6 +40,7 @@ export function Button({
     variant === "main" && styles.main,
     variant === "secondary" && styles.secondary,
     variant === "outline" && styles.outline,
+    variant === "danger" && styles.danger,
     isDisabled && styles.disabled,
     style,
     containerStyle,
@@ -46,6 +50,7 @@ export function Button({
     styles.label,
     variant === "secondary" && styles.labelSecondary,
     variant === "outline" && styles.labelOutline,
+    variant === "danger" && styles.labelDanger,
     textStyle,
   ];
 
@@ -64,7 +69,7 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   base: {
     height: 48,
     paddingHorizontal: 16,
@@ -73,34 +78,42 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
+    width: "100%",
   },
   main: {
-    backgroundColor: LIGHT_THEME.secondary,
-    borderColor: LIGHT_THEME.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   secondary: {
-    backgroundColor: LIGHT_THEME.foreground,
-    borderColor: LIGHT_THEME.secondary,
+    backgroundColor: colors.secondary,
+    borderColor: colors.secondary,
   },
   outline: {
     backgroundColor: "transparent",
-    borderColor: LIGHT_THEME.primary,
+    borderColor: colors.text,
+  },
+  danger: {
+    backgroundColor: colors.danger,
+    borderColor: colors.background,
   },
   disabled: {
-    backgroundColor: LIGHT_THEME.foreground,
-    borderColor: LIGHT_THEME.text,
+    backgroundColor: colors.foreground,
+    borderColor: colors.text,
     opacity: 0.2,
   },
   label: {
-    color: LIGHT_THEME.text,
+    color: colors.background,
     fontSize: 16,
     fontWeight: "600",
   } as TextStyle,
   labelSecondary: {
-    color: LIGHT_THEME.text,
+    color: colors.text,
   },
   labelOutline: {
-    color: LIGHT_THEME.text,
+    color: colors.text,
+  },
+  labelDanger: {
+    color: colors.text,
   },
 });
 

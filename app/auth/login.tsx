@@ -1,12 +1,13 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View, Text, StyleSheet } from "react-native";
 
+import { useTheme } from "@/context/theme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { login } from "@/backend/user-functions";
-import { LIGHT_THEME } from "@/constants/theme";
+import { login } from "@/backend/auth-functions";
+import { validateEmail } from "@/utils/form-validation";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,8 +15,29 @@ export default function LoginPage() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
 
+  const [isDisabled, setIsDisabled] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
+
+  useEffect(() => {
+
+  }, [])
+
+
+  useEffect(() => {
+    const isValidEmail = validateEmail(email);
+
+    if (isValidEmail && password.length > 0) {
+      setIsDisabled(false);
+    } else {
+      setIsDisabled(true);
+    }
+  }, [email, password]);
+
 
   const handleLogin = async () => {
     setIsSubmitting(true);
@@ -71,12 +93,12 @@ export default function LoginPage() {
           title="Iniciar Sesión"
           onPress={handleLogin}
           loading={isSubmitting}
-          disabled={isSubmitting || !email || !password}
+          disabled={isDisabled}
         />
 
         <Text
           style={styles.signupText}
-          onPress={() => {router.push("/auth/signup")}}
+          onPress={() => {router.replace("/auth/signup")}}
         >
           ¿No tienes una cuenta? Regístrate
         </Text>
@@ -85,10 +107,10 @@ export default function LoginPage() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: LIGHT_THEME.background,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -98,7 +120,7 @@ const styles = StyleSheet.create({
   },
   signupText: {
     marginTop: 16,
-    color: LIGHT_THEME.links,
+    color: colors.links,
     textDecorationLine: "underline",
   },
   errorContainer: {
@@ -106,9 +128,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: LIGHT_THEME.danger,
+    backgroundColor: colors.danger,
   },
   errorText: {
-    color: LIGHT_THEME.text,
+    color: colors.text,
   }
 })

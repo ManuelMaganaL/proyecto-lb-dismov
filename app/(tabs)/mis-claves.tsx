@@ -19,10 +19,10 @@ import {
   consumeEncryptedDato,
   deleteEncryptedDato,
   EncryptedClaveItem,
-  getUserData,
   getEncryptedDatos,
   updateEncryptedDato,
 } from "@/backend/user-functions";
+import { getUserData } from "@/backend/auth-functions";
 
 export default function MisClavesScreen() {
   const tabBarHeight = useBottomTabBarHeight();

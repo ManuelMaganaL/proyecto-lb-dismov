@@ -6,7 +6,7 @@ import {
   View,
 } from "react-native";
 
-import { LIGHT_THEME } from "@/constants/theme";
+import { useTheme } from "@/context/theme";
 
 export interface InputProps extends TextInputProps {
   label?: string;
@@ -19,6 +19,9 @@ export function Input({
   style,
   ...rest
 }: InputProps) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   const inputStyles = [
     styles.input,
     style,
@@ -27,13 +30,13 @@ export function Input({
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <TextInput style={inputStyles} placeholderTextColor="#9CA3AF" {...rest} />
+      <TextInput style={inputStyles} placeholderTextColor={colors.accent} {...rest} />
       {error && <Text style={styles.error}>{error}</Text>}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     width: "100%",
     marginBottom: 12,
@@ -42,7 +45,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontSize: 13,
     fontWeight: "700",
-    color: "#0f766e",
+    color: colors.text,
     letterSpacing: 0.3,
   },
   input: {
@@ -51,12 +54,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderWidth: 1,
     fontSize: 16,
-    borderColor: '#bfdbfe',
+    borderColor: colors.accent,
   },
   error: {
     marginTop: 4,
     fontSize: 12,
-    color: "#EF4444",
+    color: colors.danger,
   },
 });
 

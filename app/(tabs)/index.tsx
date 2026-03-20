@@ -1,19 +1,22 @@
-import { useRouter } from "expo-router";
+import { ActivityIndicator } from 'react-native';
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react-native";
+import { Alert, Animated, Easing, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, KeyboardAvoidingView, Platform } from 'react-native';
+import ImageViewing from "react-native-image-viewing";
+
+import { useRouter } from "expo-router";
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Dimensions } from 'react-native';
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
-import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react-native";
-import { Alert, Animated, Easing, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, KeyboardAvoidingView, Platform } from 'react-native';
-import ImageViewing from "react-native-image-viewing";
+
+import { useTheme } from '@/context/theme';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getProfileData, logout, updateProfileData, uploadProfileAvatar } from "@/backend/user-functions";
 
-function validateEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
+import { validateEmail } from '@/utils/form-validation';
+import { getProfileData, updateProfileData, uploadProfileAvatar } from "@/backend/user-functions";
+import { logout } from '@/backend/auth-functions';
+
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -30,6 +33,9 @@ export default function HomeScreen() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const toastTimeout = useRef<NodeJS.Timeout | null>(null);
   const previewAnim = useRef(new Animated.Value(0)).current;
+
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
 
   // Validaciones en tiempo real
   const [nameError, setNameError] = useState<string | null>(null);
@@ -308,7 +314,6 @@ export default function HomeScreen() {
   };
 
   return (
-
     <>
       {loading && (
         <View
@@ -322,7 +327,7 @@ export default function HomeScreen() {
             justifyContent: 'center',
           }}
         >
-          <ActivityIndicator size="large" color="#0f766e" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       )}
 
@@ -337,7 +342,7 @@ export default function HomeScreen() {
           zIndex: 9999,
         }}>
           <View style={{
-            backgroundColor: toast.type === 'success' ? '#d1fae5' : '#fee2e2',
+            backgroundColor: toast.type === 'success' ? colors.success : colors.danger,
             borderColor: toast.type === 'success' ? '#10b981' : '#ef4444',
             borderWidth: 1,
             borderRadius: 10,
@@ -346,13 +351,13 @@ export default function HomeScreen() {
             width: '92%',
             maxWidth: 480,
             alignItems: 'center',
-            shadowColor: '#000',
+            shadowColor: colors.text,
             shadowOpacity: 0.12,
             shadowRadius: 8,
             shadowOffset: { width: 0, height: 2 },
             elevation: 4,
           }}>
-            <Text style={{ color: toast.type === 'success' ? '#065f46' : '#991b1b', fontWeight: '700', fontSize: 15, textAlign: 'center' }}>{toast.message}</Text>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, textAlign: 'center' }}>{toast.message}</Text>
           </View>
         </View>
       )}
@@ -392,9 +397,9 @@ export default function HomeScreen() {
                 disabled={saving || loading || updatingAvatar}
               >
                 {avatarUrl ? (
-                  <Pencil size={18} color="#ffffff" strokeWidth={2.5} />
+                  <Pencil size={18} color={colors.background} strokeWidth={2.5} />
                 ) : (
-                  <Plus size={20} color="#ffffff" strokeWidth={2.8} />
+                  <Plus size={20} color={colors.background} strokeWidth={2.8} />
                 )}
               </TouchableOpacity>
             </View>
@@ -452,8 +457,6 @@ export default function HomeScreen() {
               onPress={handleSave}
               loading={saving || loading}
               disabled={saving || loading || hasValidationErrors}
-              containerStyle={{ backgroundColor: '#0f766e', borderColor: '#0f766e' }}
-              textStyle={{ color: '#fff', fontWeight: '700' }}
             />
           </Animated.View>
 
@@ -466,19 +469,18 @@ export default function HomeScreen() {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: '#f8fafc',
+              backgroundColor: colors.background,
               padding: 20,
               paddingBottom: 32,
               borderTopWidth: 1,
-              borderTopColor: '#e5e7eb',
+              borderTopColor: colors.foreground,
               zIndex: 10,
             }}
           >
             <Button
+              variant="danger"
               title="Cerrar sesión"
               onPress={handleLogout}
-              containerStyle={[styles.logoutButton, { backgroundColor: '#fee2e2', borderColor: '#ef4444' }]}
-              textStyle={{ color: '#b91c1c', fontWeight: '700' }}
             />
           </View>
         </View>
@@ -489,12 +491,12 @@ export default function HomeScreen() {
         imageIndex={0}
         visible={avatarPreviewVisible && previewImages.length > 0}
         onRequestClose={() => setAvatarPreviewVisible(false)}
-        backgroundColor="#020617"
+        backgroundColor={colors.text}
         doubleTapToZoomEnabled={true}
         HeaderComponent={() => (
           <View
             style={{
-              backgroundColor: '#020617',
+              backgroundColor: colors.text,
               width: '100%',
               minHeight: 55,
               paddingHorizontal: 12,
@@ -521,7 +523,7 @@ export default function HomeScreen() {
                 onPress={() => setAvatarPreviewVisible(false)}
                 disabled={updatingAvatar}
               >
-                <ArrowLeft size={20} color="#ffffff" strokeWidth={3} />
+                <ArrowLeft size={20} color={colors.background} strokeWidth={3} />
               </TouchableOpacity>
               <Text style={[styles.previewHeaderTitle, { textAlign: 'center' }]}>Vista previa</Text>
             </View>
@@ -542,7 +544,7 @@ export default function HomeScreen() {
                 onPress={handlePickAvatar}
                 disabled={updatingAvatar}
               >
-                <Pencil size={20} color="#ffffff" strokeWidth={2.4} />
+                <Pencil size={20} color={colors.background} strokeWidth={2.4} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={{
@@ -560,7 +562,7 @@ export default function HomeScreen() {
                 onPress={handleClearAvatar}
                 disabled={updatingAvatar || !avatarUrl}
               >
-                <Trash2 size={20} color="#fecaca" strokeWidth={2.4} />
+                <Trash2 size={20} color={colors.danger} strokeWidth={2.4} />
               </TouchableOpacity>
             </View>
           </View>
@@ -571,10 +573,10 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
   },
   content: {
     paddingTop: 20,
@@ -583,12 +585,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.text,
   },
   subtitle: {
     marginTop: 8,
     marginBottom: 20,
-    color: '#334155',
+    color: colors.accent,
     fontSize: 15,
   },
   avatarBox: {
@@ -604,7 +606,7 @@ const styles = StyleSheet.create({
     height: 112,
     borderRadius: 56,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: colors.foreground,
   },
   avatarFallback: {
     width: 112,
@@ -612,10 +614,10 @@ const styles = StyleSheet.create({
     borderRadius: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0f766e',
+    backgroundColor: colors.primary,
   },
   avatarText: {
-    color: '#fff',
+    color: colors.background,
     fontWeight: '700',
     fontSize: 24,
   },
@@ -624,13 +626,13 @@ const styles = StyleSheet.create({
     right: -10,
     bottom: -4,
     borderRadius: 999,
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.text,
     width: 32,
     height: 32,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#ffffff',
+    borderColor: colors.foreground,
   },
   // previewFooter removed
   previewFooterButton: {
@@ -652,7 +654,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   previewFooterButtonText: {
-    color: '#ffffff',
+    color: colors.background,
     fontWeight: '700',
     letterSpacing: 0.2,
   },
@@ -687,7 +689,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   previewHeaderTitle: {
-    color: '#f8fafc',
+    color: colors.foreground,
     fontSize: 18,
     lineHeight: 22,
     fontWeight: '700',
@@ -720,12 +722,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   ok: {
-    backgroundColor: '#d1fae5',
-    color: '#065f46',
+    backgroundColor: colors.success,
+    color: colors.text,
   },
   error: {
-    backgroundColor: '#fee2e2',
-    color: '#991b1b',
+    backgroundColor: colors.danger,
+    color: colors.text,
   },
   logoutButton: {
     marginTop: 12,
