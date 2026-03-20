@@ -32,6 +32,13 @@
       "@react-native-community/datetimepicker",
       "expo-router"
     ],
-    "scheme": "proyectolbdismov"
+    "scheme": "proyectolbdismov",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "dc91d555-2d87-493c-9562-7a303677cc32"
+      }
+    },
+    "owner": "lab-dismov"
   }
 }
