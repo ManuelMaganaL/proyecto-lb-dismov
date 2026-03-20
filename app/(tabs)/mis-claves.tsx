@@ -381,6 +381,7 @@ const SwipeableCard = ({
 }: SwipeableCardProps) => {
   const pan = useRef(new Animated.ValueXY()).current;
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canEdit = activeFilter === "enviadas" && !isExpired;
 
   const resetSwipe = useCallback(() => {
     Animated.timing(pan.x, {
@@ -393,11 +394,11 @@ const SwipeableCard = ({
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, { dx }) => Math.abs(dx) > 10 && (dx < 0 || !isExpired),
+      onMoveShouldSetPanResponder: (_, { dx }) => Math.abs(dx) > 10 && (dx < 0 || (dx > 0 && canEdit)),
       onPanResponderMove: (_, { dx }) => {
         if (dx < 0) {
           pan.x.setValue(Math.max(dx, -100));
-        } else if (dx > 0 && !isExpired) {
+        } else if (dx > 0 && canEdit) {
           pan.x.setValue(Math.min(dx, 100));
         }
       },
@@ -407,7 +408,7 @@ const SwipeableCard = ({
             toValue: -100,
             useNativeDriver: false,
           }).start();
-        } else if (dx > 100 && !isExpired) {
+        } else if (dx > 100 && canEdit) {
           Animated.spring(pan.x, {
             toValue: 100,
             useNativeDriver: false,
@@ -454,6 +455,7 @@ const SwipeableCard = ({
   };
 
   const handleEdit = () => {
+    if (!canEdit) return;
     resetSwipe();
     onStartEdit(item);
   };
@@ -531,7 +533,7 @@ const SwipeableCard = ({
           </View>
         ) : null}
       </Animated.View>
-      <View style={[styles.swipeEditBackground, isExpired && { display: "none" }]}>
+      <View style={[styles.swipeEditBackground, !canEdit && { display: "none" }]}>
         <TouchableOpacity style={[styles.swipeEditButton, { opacity: 1 }]} onPress={handleEdit}>
           <Text style={styles.swipeEditText}>Editar</Text>
         </TouchableOpacity>
