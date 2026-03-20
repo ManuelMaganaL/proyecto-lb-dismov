@@ -1,13 +1,19 @@
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { StatusBar } from 'expo-status-bar';
+import { ActivityIndicator, Dimensions } from 'react-native';
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react-native";
-import { Alert, Animated, Easing, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal } from 'react-native';
+import { Alert, Animated, Easing, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import ImageViewing from "react-native-image-viewing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getProfileData, logout, updateProfileData, uploadProfileAvatar } from "@/backend/user-functions";
+
+function validateEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -21,7 +27,43 @@ export default function HomeScreen() {
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const toastTimeout = useRef<NodeJS.Timeout | null>(null);
   const previewAnim = useRef(new Animated.Value(0)).current;
+
+  // Validaciones en tiempo real
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  // Validar nombre
+  useEffect(() => {
+    if (!fullName.trim()) {
+      setNameError("El nombre no puede estar vacío.");
+    } else {
+      setNameError(null);
+    }
+  }, [fullName]);
+
+  // Validar correo
+  useEffect(() => {
+    if (!email.trim()) {
+      setEmailError("El correo no puede estar vacío.");
+    } else if (!validateEmail(email.trim())) {
+      setEmailError("Correo no válido.");
+    } else {
+      setEmailError(null);
+    }
+  }, [email]);
+
+  // Validar contraseña (si se ingresa)
+  useEffect(() => {
+    if (newPassword && newPassword.length > 0 && newPassword.length < 8) {
+      setPasswordError("La contraseña debe tener al menos 8 caracteres.");
+    } else {
+      setPasswordError(null);
+    }
+  }, [newPassword]);
 
   useEffect(() => {
     async function loadProfile() {
@@ -77,6 +119,9 @@ export default function HomeScreen() {
     if (status !== "granted") {
       setIsError(true);
       setMessage("Necesitas permitir el acceso a tus fotos para elegir un avatar.");
+      setToast({ message: "Necesitas permitir el acceso a tus fotos para elegir un avatar.", type: "error" });
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 2500);
       return;
     }
 
@@ -91,29 +136,53 @@ export default function HomeScreen() {
       return;
     }
 
+
     const selectedAsset = result.assets[0];
     const selectedUri = selectedAsset?.uri;
 
     if (!selectedUri) {
       setIsError(true);
       setMessage("No se pudo obtener la imagen seleccionada.");
+      setToast({ message: "No se pudo obtener la imagen seleccionada.", type: "error" });
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 2500);
+      return;
+    }
+
+    // Optimización: redimensionar y comprimir
+    let manipulated = null;
+    try {
+      manipulated = await ImageManipulator.manipulateAsync(
+        selectedUri,
+        [{ resize: { width: 512, height: 512 } }],
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+      );
+    } catch (e) {
+      setIsError(true);
+      setMessage("No se pudo optimizar la imagen.");
+      setToast({ message: "No se pudo optimizar la imagen.", type: "error" });
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 2500);
       return;
     }
 
     setUpdatingAvatar(true);
-    setAvatarUrl(selectedUri);
+    setAvatarUrl(manipulated.uri);
     setMessage("Actualizando foto de perfil...");
     setIsError(false);
 
     const { publicUrl, error: uploadError } = await uploadProfileAvatar({
-      fileUri: selectedAsset.uri,
-      fileName: selectedAsset.fileName ?? undefined,
-      mimeType: selectedAsset.mimeType,
+      fileUri: manipulated.uri,
+      fileName: selectedAsset.fileName ? selectedAsset.fileName.replace(/\.[^.]+$/, '.jpg') : undefined,
+      mimeType: 'image/jpeg',
     });
 
     if (uploadError || !publicUrl) {
       setIsError(true);
       setMessage(uploadError ?? "No se pudo subir la foto de perfil.");
+      setToast({ message: uploadError ?? "No se pudo subir la foto de perfil.", type: "error" });
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 2500);
       setUpdatingAvatar(false);
       return;
     }
@@ -123,13 +192,18 @@ export default function HomeScreen() {
     if (!success) {
       setIsError(true);
       setMessage(error ?? "No se pudo actualizar la foto de perfil.");
+      setToast({ message: error ?? "No se pudo actualizar la foto de perfil.", type: "error" });
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 2500);
       setUpdatingAvatar(false);
       return;
     }
 
     setAvatarUrl(publicUrl);
     setIsError(false);
-    setMessage("Foto de perfil actualizada.");
+    setToast({ message: "Foto de perfil actualizada.", type: "success" });
+    if (toastTimeout.current) clearTimeout(toastTimeout.current);
+    toastTimeout.current = setTimeout(() => setToast(null), 2000);
     setUpdatingAvatar(false);
   };
 
@@ -157,19 +231,33 @@ export default function HomeScreen() {
             setAvatarUrl(previousAvatar);
             setIsError(true);
             setMessage(error ?? "No se pudo quitar la foto de perfil.");
+            setToast({ message: error ?? "No se pudo quitar la foto de perfil.", type: "error" });
+            if (toastTimeout.current) clearTimeout(toastTimeout.current);
+            toastTimeout.current = setTimeout(() => setToast(null), 2500);
             setUpdatingAvatar(false);
             return;
           }
 
           setIsError(false);
           setMessage("Foto de perfil eliminada.");
+          setToast({ message: "Foto de perfil eliminada.", type: "success" });
+          if (toastTimeout.current) clearTimeout(toastTimeout.current);
+          toastTimeout.current = setTimeout(() => setToast(null), 2000);
           setUpdatingAvatar(false);
         },
       },
     ]);
   };
 
+  const hasValidationErrors = !!nameError || !!emailError || !!passwordError;
+
   const handleSave = async () => {
+    if (hasValidationErrors) {
+      setToast({ message: "Corrige los errores antes de guardar.", type: "error" });
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 2500);
+      return;
+    }
     setSaving(true);
     setMessage("");
 
@@ -182,106 +270,219 @@ export default function HomeScreen() {
     if (!success) {
       setIsError(true);
       setMessage(error ?? "No se pudo actualizar el perfil.");
+      setToast({ message: error ?? "No se pudo actualizar el perfil.", type: "error" });
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 2500);
       setSaving(false);
       return;
     }
 
     setIsError(false);
-    setMessage("Perfil actualizado. Si cambiaste correo, revisa tu bandeja para confirmar.");
+    setToast({ message: "Perfil actualizado.", type: "success" });
+    if (toastTimeout.current) clearTimeout(toastTimeout.current);
+    toastTimeout.current = setTimeout(() => setToast(null), 2000);
     setNewPassword("");
     setSaving(false);
   };
 
   const handleLogout = async () => {
-    const { success, error } = await logout();
-    if (!success) {
-      console.log("Error logout:", error);
-    } else {
-      router.replace("/auth/login");
-    }
+    Alert.alert(
+      'Cerrar sesión',
+      '¿Estás seguro de que quieres cerrar sesión?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Cerrar sesión',
+          style: 'destructive',
+          onPress: async () => {
+            const { success, error } = await logout();
+            if (!success) {
+              console.log("Error logout:", error);
+            } else {
+              router.replace("/auth/login");
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
+
     <>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-      <Text style={styles.title}>Perfil</Text>
-      <Text style={styles.subtitle}>Ve y actualiza tus datos de cuenta.</Text>
-
-      <View style={styles.avatarBox}>
-        <View style={styles.avatarWrapper}>
-          <TouchableOpacity
-            activeOpacity={avatarUrl ? 0.85 : 1}
-            onPress={handleOpenAvatarPreview}
-            disabled={!avatarUrl}
-          >
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarText}>{initials}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.avatarEditButton}
-            onPress={handlePickAvatar}
-            disabled={saving || loading || updatingAvatar}
-          >
-            {avatarUrl ? (
-              <Pencil size={12} color="#ffffff" strokeWidth={2.5} />
-            ) : (
-              <Plus size={13} color="#ffffff" strokeWidth={2.8} />
-            )}
-          </TouchableOpacity>
+      {loading && (
+        <View
+          style={{
+            position: "absolute",
+            top: 48,
+            left: 0,
+            right: 0,
+            alignItems: "center",
+            zIndex: 100,
+            justifyContent: 'center',
+          }}
+        >
+          <ActivityIndicator size="large" color="#0f766e" />
         </View>
-      </View>
+      )}
 
-      <Input
-        label="Nombre"
-        placeholder="Tu nombre"
-        value={fullName}
-        onChangeText={setFullName}
-      />
+      {/* Toast flotante */}
+      {toast && (
+        <View style={{
+          position: 'absolute',
+          top: 68, // bajado de 64 a 72
+          left: 0,
+          right: 0,
+          alignItems: 'center',
+          zIndex: 9999,
+        }}>
+          <View style={{
+            backgroundColor: toast.type === 'success' ? '#d1fae5' : '#fee2e2',
+            borderColor: toast.type === 'success' ? '#10b981' : '#ef4444',
+            borderWidth: 1,
+            borderRadius: 10,
+            paddingHorizontal: 18,
+            paddingVertical: 12,
+            width: '92%',
+            maxWidth: 480,
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOpacity: 0.12,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 4,
+          }}>
+            <Text style={{ color: toast.type === 'success' ? '#065f46' : '#991b1b', fontWeight: '700', fontSize: 15, textAlign: 'center' }}>{toast.message}</Text>
+          </View>
+        </View>
+      )}
 
-      <Input
-        label="Correo"
-        placeholder="tu@correo.com"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      >
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            style={styles.container}
+            contentContainerStyle={[styles.content, { paddingBottom: 100 }]} // deja espacio para el botón fijo
+            keyboardShouldPersistTaps="handled"
+          >
+          <Text style={styles.title}>Perfil</Text>
+          <Text style={styles.subtitle}>Ve y actualiza tus datos de cuenta.</Text>
 
-      <Input
-        label="Nueva contraseña"
-        placeholder="Dejar vacío para no cambiar"
-        value={newPassword}
-        onChangeText={setNewPassword}
-        secureTextEntry
-      />
+          <View style={styles.avatarBox}>
+            <View style={styles.avatarWrapper}>
+              <TouchableOpacity
+                activeOpacity={avatarUrl ? 0.85 : 1}
+                onPress={handleOpenAvatarPreview}
+                disabled={!avatarUrl}
+              >
+                {avatarUrl ? (
+                  <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <Text style={styles.avatarText}>{initials}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.avatarEditButton}
+                onPress={handlePickAvatar}
+                disabled={saving || loading || updatingAvatar}
+              >
+                {avatarUrl ? (
+                  <Pencil size={18} color="#ffffff" strokeWidth={2.5} />
+                ) : (
+                  <Plus size={20} color="#ffffff" strokeWidth={2.8} />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
 
-      {message ? (
-        <Text style={[styles.message, isError ? styles.error : styles.ok]}>{message}</Text>
-      ) : null}
+          <Input
+            label="Nombre"
+            placeholder="Tu nombre"
+            value={fullName}
+            onChangeText={setFullName}
+            error={nameError ?? undefined}
+            accessible
+            accessibilityLabel="Campo de nombre"
+            testID="input-nombre"
+          />
 
-      <Button
-        title="Guardar cambios"
-        onPress={handleSave}
-        loading={saving || loading}
-        disabled={saving || loading}
-      />
+          <Input
+            label="Correo"
+            placeholder="tu@correo.com"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            error={emailError ?? undefined}
+            accessible
+            accessibilityLabel="Campo de correo electrónico"
+            testID="input-correo"
+          />
 
-      <StatusBar style="auto" />
-      <Button
-        title="Cerrar sesión"
-        onPress={handleLogout}
-        containerStyle={styles.logoutButton}
-      />
-      </ScrollView>
+          <Input
+            label="Nueva contraseña"
+            placeholder="Dejar vacío para no cambiar"
+            value={newPassword}
+            onChangeText={setNewPassword}
+            secureTextEntry
+            error={passwordError ?? undefined}
+            accessible
+            accessibilityLabel="Campo de nueva contraseña"
+            testID="input-password"
+          />
+
+          {/* Mensaje debajo de los inputs eliminado, solo se usa Toast flotante */}
+
+          <Animated.View
+            accessible
+            accessibilityLabel="Botón guardar cambios"
+            testID="btn-guardar"
+            style={{
+              marginTop: 14,
+              transform: [{ scale: saving ? 0.97 : 1 }],
+            }}
+          >
+            <Button
+              title="Guardar cambios"
+              onPress={handleSave}
+              loading={saving || loading}
+              disabled={saving || loading || hasValidationErrors}
+              containerStyle={{ backgroundColor: '#0f766e', borderColor: '#0f766e' }}
+              textStyle={{ color: '#fff', fontWeight: '700' }}
+            />
+          </Animated.View>
+
+          <StatusBar style="auto" />
+        </ScrollView>
+          {/* Botón fijo abajo */}
+          <View
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: '#f8fafc',
+              padding: 20,
+              paddingBottom: 32,
+              borderTopWidth: 1,
+              borderTopColor: '#e5e7eb',
+              zIndex: 10,
+            }}
+          >
+            <Button
+              title="Cerrar sesión"
+              onPress={handleLogout}
+              containerStyle={[styles.logoutButton, { backgroundColor: '#fee2e2', borderColor: '#ef4444' }]}
+              textStyle={{ color: '#b91c1c', fontWeight: '700' }}
+            />
+          </View>
+        </View>
+      </KeyboardAvoidingView>
 
       <ImageViewing
         images={previewImages}
@@ -392,22 +593,23 @@ const styles = StyleSheet.create({
   },
   avatarBox: {
     alignItems: 'center',
+    marginTop: 20,
     marginBottom: 18,
   },
   avatarWrapper: {
     position: 'relative',
   },
   avatarImage: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
     borderWidth: 1,
     borderColor: '#cbd5e1',
   },
   avatarFallback: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#0f766e',
@@ -419,15 +621,15 @@ const styles = StyleSheet.create({
   },
   avatarEditButton: {
     position: 'absolute',
-    right: -8,
-    bottom: -2,
+    right: -10,
+    bottom: -4,
     borderRadius: 999,
     backgroundColor: '#0f172a',
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#ffffff',
   },
   // previewFooter removed
