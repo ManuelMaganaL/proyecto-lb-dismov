@@ -44,14 +44,14 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="mis-claves"
+        name="historial"
         options={{
           title: "Historal",
           tabBarIcon: ({ color, size }) => <KeyRound size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="ingresar-dato"
+        name="compartir"
         options={{
           title: "Compartir",
           tabBarIcon: ({ color, size }) => <PlusCircle size={size} color={color} />,
