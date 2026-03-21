@@ -1,31 +1,38 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { supabase } from "@/backend/supabase/client";
+import { getUserData } from "@/backend/auth-functions";
 
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
+  const segmentsRef = useRef(segments);
+  segmentsRef.current = segments;
+
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
   const isAuthRoute = useMemo(() => segments[0] === "auth", [segments]);
+  const isAtRoot = useMemo(() => (segments as unknown as string[]).length === 0, [segments]);
 
   useEffect(() => {
     let isMounted = true;
 
     async function validateSession() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = await getUserData();
 
       if (!isMounted) return;
 
-      if (!user && !isAuthRoute) {
+      const segs = segmentsRef.current as unknown as string[];
+      const atRoot = segs.length === 0;
+      const onAuth = segs[0] === "auth";
+
+      if (!user && !onAuth) {
         router.replace("/auth/login");
-      } else if (user && isAuthRoute) {
-        router.replace("/(tabs)");
+      } else if (user && (onAuth || atRoot)) {
+        router.replace("/auth/usuarios-link");
       }
 
       setIsCheckingSession(false);
@@ -34,13 +41,17 @@ export default function RootLayout() {
     validateSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const segs = segmentsRef.current as unknown as string[];
+      const atRoot = segs.length === 0;
+      const onAuth = segs[0] === "auth";
+
       if (!session?.user) {
         router.replace("/auth/login");
         return;
       }
 
-      if (isAuthRoute) {
-        router.replace("/(tabs)");
+      if (onAuth || atRoot) {
+        router.replace("/auth/usuarios-link");
       }
     });
 
@@ -48,7 +59,7 @@ export default function RootLayout() {
       isMounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, [isAuthRoute, router]);
+  }, [isAuthRoute, isAtRoot, router]);
 
   return (
     <SafeAreaProvider>
@@ -58,10 +69,7 @@ export default function RootLayout() {
             <ActivityIndicator />
           </View>
         ) : (
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="auth" />
-          </Stack>
+          <Stack screenOptions={{ headerShown: false }} />
         )}
       </SafeAreaView>
     </SafeAreaProvider>

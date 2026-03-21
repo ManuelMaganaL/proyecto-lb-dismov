@@ -51,6 +51,7 @@ export function Button({
     variant === "secondary" && styles.labelSecondary,
     variant === "outline" && styles.labelOutline,
     variant === "danger" && styles.labelDanger,
+    isDisabled && styles.labelSecondary,
     textStyle,
   ];
 

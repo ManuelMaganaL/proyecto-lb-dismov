@@ -82,3 +82,19 @@ export async function logout() {
     error: null,
   };
 }
+
+// Funcion para permitir accesos
+export async function allowAccess(userId: string, minRole: number): Promise<boolean> {
+  const { data, error } = await supabase.from("usuario").select("*").eq("id", userId).single();
+
+  if (error) {
+    console.error("Error fetching user role:", error);
+    return false;
+  }
+
+  if (data.rol_id <= minRole) {
+    return true;
+  } else {
+    return false;
+  }
+}

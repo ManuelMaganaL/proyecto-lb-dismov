@@ -31,7 +31,7 @@ export default function SignupPage() {
     const checkUser = async () => {
       const user = await getUserData();
       if (user) {
-        router.replace("/(tabs)");
+        router.replace("/auth/usuarios-link");
       }
     }
     checkUser();
@@ -76,7 +76,7 @@ export default function SignupPage() {
 
       setTimeout(() => setError(null), 5000);
     } else {
-      router.replace("/(tabs)");
+      router.replace("/auth/usuarios-link");
     }
 
     setIsSubmitting(false);
