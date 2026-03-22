@@ -1,13 +1,28 @@
 import { Tabs } from "expo-router";
 import { CircleUserRound, KeyRound, PlusCircle, Settings } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { useTheme } from "@/context/theme";
+import { useEffect, useState } from "react";
+import { getUserData, allowAccess } from "@/backend/auth-functions";
+import { ROLES } from "../../../constants/roles";
 
 export default function TabsLayout() {
   const { colors } = useTheme();
-
   const insets = useSafeAreaInsets();
+  const [showAdmin, setShowAdmin] = useState(false);
+
+  useEffect(() => {
+    async function fetchUser() {
+      const user = await getUserData();
+      if (user) {
+        const canAccess = await allowAccess(user.id, ROLES.admin);
+        if (canAccess) {
+          setShowAdmin(true);
+        }
+      }
+    }
+    fetchUser();
+  }, []);
 
   return (
     <Tabs
@@ -39,7 +54,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="historial"
         options={{
-          title: "Historal",
+          title: "Historial",
           tabBarIcon: ({ color, size }) => <KeyRound size={size} color={color} />,
         }}
       />
@@ -51,12 +66,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="administracion-link"
+        name="administrar"
         options={{
           title: "Administrar",
           tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
         }}
       />
+
     </Tabs>
   );
 }
