@@ -2,33 +2,33 @@ import { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { Users, UserCog, Building2 } from "lucide-react-native";
+
+import { useTheme } from "@/context/theme";
 import { getUserData, allowAccess } from "@/backend/auth-functions";
-import { ROLES } from "../../../constants/roles";
+import { ROLES } from "@/constants/roles";
+
 
 
 export default function Administrar() {
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
+  // Verificacion de roles
   useEffect(() => {
     async function fetchUser() {
-      try {
-        const user = await getUserData();
-        if (!user) {
-          setError("No se pudo obtener el usuario. Inicia sesión nuevamente.");
-          setLoading(false);
-          return;
-        }
-        const canAccess = await allowAccess(user.id, ROLES.admin);
-        if (canAccess) {
-          setIsAdmin(true);
-        } else {
-          setError("No tienes permisos de administrador.");
-        }
-      } catch (e) {
-        setError("Error al obtener el usuario o rol.");
+      const user = await getUserData();
+      if (!user) {
+        router.replace("auth/login")
+        setLoading(false);
+        return;
+      }
+      const canAccess = await allowAccess(user.id, ROLES.teamLeader);
+      if (!canAccess) {
+        router.replace("error/no-admin")
+        return;
       }
       setLoading(false);
     }
@@ -43,14 +43,6 @@ export default function Administrar() {
     );
   }
 
-  if (error) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: "#c00", fontSize: 16, textAlign: "center" }}>{error}</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Administración</Text>
@@ -61,7 +53,7 @@ export default function Administrar() {
           activeOpacity={0.85}
         >
           <View style={styles.iconWrapper}>
-            <Users size={44} color={'#222'} />
+            <Users size={44} color={colors.text} />
           </View>
           <View style={styles.cardTextWrapper}>
             <Text style={styles.cardTitle}>Mis equipos</Text>
@@ -74,7 +66,7 @@ export default function Administrar() {
           activeOpacity={0.85}
         >
           <View style={styles.iconWrapper}>
-            <UserCog size={44} color={'#222'} />
+            <UserCog size={44} color={colors.text} />
           </View>
           <View style={styles.cardTextWrapper}>
             <Text style={styles.cardTitle}>Equipos</Text>
@@ -87,7 +79,7 @@ export default function Administrar() {
           activeOpacity={0.85}
         >
           <View style={styles.iconWrapper}>
-            <Building2 size={44} color={'#222'} />
+            <Building2 size={44} color={colors.text} />
           </View>
           <View style={styles.cardTextWrapper}>
             <Text style={styles.cardTitle}>Organización</Text>
@@ -99,13 +91,13 @@ export default function Administrar() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
     justifyContent: "flex-start",
     paddingTop: 40,
-    backgroundColor: "#fff",
+    backgroundColor: colors.background,
   },
   title: {
     fontSize: 24,
@@ -124,25 +116,25 @@ const styles = StyleSheet.create({
   cardVertical: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderRadius: 18,
     paddingVertical: 22,
     paddingHorizontal: 20,
     marginHorizontal: 0,
     width: '92%',
     maxWidth: 420,
-    shadowColor: '#000',
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.10,
     shadowRadius: 8,
     elevation: 4,
     borderWidth: 2,
-    borderColor: '#e5e7eb',
+    borderColor: colors.background,
     // transition removed (not valid in React Native)
   },
   selectedCard: {
-    borderColor: '#2563eb',
-    backgroundColor: '#f0f6ff',
+    borderColor: colors.main,
+    backgroundColor: colors.foreground,
     shadowOpacity: 0.18,
     elevation: 7,
   },
@@ -150,11 +142,11 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 12,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 18,
-    shadowColor: '#2563eb',
+    shadowColor: colors.main,
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
@@ -167,13 +159,13 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1e293b',
+    color: colors.text,
     marginBottom: 2,
     letterSpacing: 0.2,
   },
   cardDesc: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.accent,
     fontWeight: '400',
     letterSpacing: 0.1,
   },
@@ -194,7 +186,7 @@ const styles = StyleSheet.create({
   },
   hintText: {
     fontSize: 16,
-    color: "#888",
+    color: colors.accent,
     marginTop: 32,
   },
 });
