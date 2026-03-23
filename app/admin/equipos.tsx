@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react-native";
 
 import { useTheme } from "@react-navigation/native";
@@ -9,6 +9,7 @@ import { ROLES } from "@/constants/roles";
 
 
 export default function EquiposScreen() {
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   const { colors } = useTheme();
@@ -22,14 +23,25 @@ export default function EquiposScreen() {
         router.replace("/auth/login");
         return;
       }
-      
+
       const canAccess = await allowAccess(user.id, ROLES.admin);
       if (!canAccess) {
         router.replace("/error/no-admin");
+        return;
       }
+      setLoading(false);
     };
     getAccessPermission();
-  }, [])
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingRoot}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingLabel}>Cargando…</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -43,6 +55,18 @@ export default function EquiposScreen() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
+  loadingRoot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.background,
+    gap: 16,
+  },
+  loadingLabel: {
+    fontSize: 15,
+    color: colors.text,
+    opacity: 0.7,
+  },
   container: {
     flex: 1,
     alignItems: "center",
