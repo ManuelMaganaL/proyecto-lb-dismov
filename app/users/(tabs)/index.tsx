@@ -65,7 +65,7 @@ export default function HomeScreen() {
   // Validar contraseña (si se ingresa)
   useEffect(() => {
     if (newPassword && newPassword.length > 0 && newPassword.length < 8) {
-      setPasswordError("La contraseña debe tener al menos 8 caracteres.");
+      setPasswordError("La contraseña debe tener al menos 8caracteres.");
     } else {
       setPasswordError(null);
     }
@@ -385,95 +385,95 @@ export default function HomeScreen() {
             contentContainerStyle={[styles.content, { paddingBottom: 100 }]} // deja espacio para el botón fijo
             keyboardShouldPersistTaps="handled"
           >
-          <Text style={styles.title}>Perfil</Text>
-          <Text style={styles.subtitle}>Ve y actualiza tus datos de cuenta.</Text>
+            <Text style={styles.title}>Perfil</Text>
+            <Text style={styles.subtitle}>Ve y actualiza tus datos de cuenta.</Text>
 
-          <View style={styles.avatarBox}>
-            <View style={styles.avatarWrapper}>
-              <TouchableOpacity
-                activeOpacity={avatarUrl ? 0.85 : 1}
-                onPress={handleOpenAvatarPreview}
-                disabled={!avatarUrl}
-              >
-                {avatarUrl ? (
-                  <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-                ) : (
-                  <View style={styles.avatarFallback}>
-                    <Text style={styles.avatarText}>{initials}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.avatarEditButton}
-                onPress={handlePickAvatar}
-                disabled={saving || loading || updatingAvatar}
-              >
-                {avatarUrl ? (
-                  <Pencil size={18} color={colors.background} strokeWidth={2.5} />
-                ) : (
-                  <Plus size={20} color={colors.background} strokeWidth={2.8} />
-                )}
-              </TouchableOpacity>
+            <View style={styles.avatarBox}>
+              <View style={styles.avatarWrapper}>
+                <TouchableOpacity
+                  activeOpacity={avatarUrl ? 0.85 : 1}
+                  onPress={handleOpenAvatarPreview}
+                  disabled={!avatarUrl}
+                >
+                  {avatarUrl ? (
+                    <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+                  ) : (
+                    <View style={styles.avatarFallback}>
+                      <Text style={styles.avatarText}>{initials}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.avatarEditButton}
+                  onPress={handlePickAvatar}
+                  disabled={saving || loading || updatingAvatar}
+                >
+                  {avatarUrl ? (
+                    <Pencil size={18} color={colors.background} strokeWidth={2.5} />
+                  ) : (
+                    <Plus size={20} color={colors.background} strokeWidth={2.8} />
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
 
-          <Input
-            label="Nombre"
-            placeholder="Tu nombre"
-            value={fullName}
-            onChangeText={setFullName}
-            error={nameError ?? undefined}
-            accessible
-            accessibilityLabel="Campo de nombre"
-            testID="input-nombre"
-          />
-
-          <Input
-            label="Correo"
-            placeholder="tu@correo.com"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            error={emailError ?? undefined}
-            accessible
-            accessibilityLabel="Campo de correo electrónico"
-            testID="input-correo"
-          />
-
-          <Input
-            label="Nueva contraseña"
-            placeholder="Dejar vacío para no cambiar"
-            value={newPassword}
-            onChangeText={setNewPassword}
-            secureTextEntry
-            error={passwordError ?? undefined}
-            accessible
-            accessibilityLabel="Campo de nueva contraseña"
-            testID="input-password"
-          />
-
-          {/* Mensaje debajo de los inputs eliminado, solo se usa Toast flotante */}
-
-          <Animated.View
-            accessible
-            accessibilityLabel="Botón guardar cambios"
-            testID="btn-guardar"
-            style={{
-              marginTop: 14,
-              transform: [{ scale: saving ? 0.97 : 1 }],
-            }}
-          >
-            <Button
-              title="Guardar cambios"
-              onPress={handleSave}
-              loading={saving || loading}
-              disabled={saving || loading || hasValidationErrors}
+            <Input
+              label="Nombre"
+              placeholder="Tu nombre"
+              value={fullName}
+              onChangeText={setFullName}
+              error={nameError ?? undefined}
+              accessible
+              accessibilityLabel="Campo de nombre"
+              testID="input-nombre"
             />
-          </Animated.View>
 
-          <StatusBar style="auto" />
-        </ScrollView>
+            <Input
+              label="Correo"
+              placeholder="tu@correo.com"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              error={emailError ?? undefined}
+              accessible
+              accessibilityLabel="Campo de correo electrónico"
+              testID="input-correo"
+            />
+
+            <Input
+              label="Nueva contraseña"
+              placeholder="Dejar vacío para no cambiar"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+              error={passwordError ?? undefined}
+              accessible
+              accessibilityLabel="Campo de nueva contraseña"
+              testID="input-password"
+            />
+
+            {/* Mensaje debajo de los inputs eliminado, solo se usa Toast flotante */}
+
+            <Animated.View
+              accessible
+              accessibilityLabel="Botón guardar cambios"
+              testID="btn-guardar"
+              style={{
+                marginTop: 14,
+                transform: [{ scale: saving ? 0.97 : 1 }],
+              }}
+            >
+              <Button
+                title="Guardar cambios"
+                onPress={handleSave}
+                loading={saving || loading}
+                disabled={saving || loading || hasValidationErrors}
+              />
+            </Animated.View>
+
+            <StatusBar style="auto" />
+          </ScrollView>
           {/* Botón fijo abajo */}
           <View
             style={{
@@ -579,7 +579,7 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
-        // FooterComponent removed
+      // FooterComponent removed
       />
     </>
   );

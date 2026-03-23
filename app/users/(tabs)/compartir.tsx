@@ -259,6 +259,7 @@ const IngresarDato = () => {
           value={titulo}
           onChangeText={setTitulo}
           placeholder="Titulo (opcional)"
+          placeholderTextColor="#94a3b8"
           maxLength={MAX_TITULO_LENGTH}
           style={styles.input}
         />
@@ -288,6 +289,7 @@ const IngresarDato = () => {
               value={targetSearch}
               onChangeText={setTargetSearch}
               placeholder="Buscar por nombre o correo"
+              placeholderTextColor="#94a3b8"
               autoCapitalize="none"
               autoCorrect={false}
               style={styles.searchInput}
@@ -325,6 +327,7 @@ const IngresarDato = () => {
               value={maxVistas}
               onChangeText={handleMaxVistasChange}
               placeholder="Vistas"
+              placeholderTextColor="#94a3b8"
               keyboardType="number-pad"
               maxLength={2}
               style={styles.input}
@@ -340,6 +343,7 @@ const IngresarDato = () => {
                 {fechaCaducidad || 'Seleccionar fecha'}
               </Text>
             </Pressable>
+            <Text style={styles.inlineHint}>Opcional: sin fecha no caduca.</Text>
             {showDatePicker ? (
               <DateTimePicker
                 value={fechaCaducidadDate ?? new Date()}
@@ -365,6 +369,7 @@ const IngresarDato = () => {
           value={dato}
           onChangeText={setDato}
           placeholder="Escribe una clave"
+          placeholderTextColor="#94a3b8"
           secureTextEntry
           autoCapitalize="none"
           autoCorrect={false}
@@ -393,9 +398,6 @@ const IngresarDato = () => {
           </Pressable>
         </View>
 
-        <View style={styles.helpPanel}>
-          <Text style={styles.helpText}>La fecha es opcional: sin fecha, la clave no caduca.</Text>
-        </View>
 
         {mensaje ? <Text style={[styles.mensaje, mensajeTipo === 'success' ? styles.ok : styles.fail]}>{mensaje}</Text> : null}
       </View>
@@ -621,18 +623,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.2,
   },
-  helpPanel: {
-    marginTop: 10,
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: '#ecfeff',
-    borderWidth: 1,
-    borderColor: '#a5f3fc',
-  },
-  helpText: {
-    color: '#475569',
-    fontSize: 12,
-    lineHeight: 18,
+  helpTextInline: {
+    color: '#94a3b8',
+    fontSize: 11,
+    marginTop: -4,
+    marginBottom: 8,
   },
   mensaje: {
     marginTop: 12,
