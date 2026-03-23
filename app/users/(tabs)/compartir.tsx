@@ -107,18 +107,23 @@ const IngresarDato = () => {
       return;
     }
 
-    Alert.alert(
-      'Limpiar formulario',
-      'Se eliminarán los datos capturados. ¿Deseas continuar?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Limpiar',
-          style: 'destructive',
-          onPress: handleClearForm,
-        },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      const confirmClear = window.confirm('Se eliminarán los datos capturados. ¿Deseas continuar?');
+      if (confirmClear) handleClearForm();
+    } else {
+      Alert.alert(
+        'Limpiar formulario',
+        'Se eliminarán los datos capturados. ¿Deseas continuar?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Limpiar',
+            style: 'destructive',
+            onPress: handleClearForm,
+          },
+        ]
+      );
+    }
   };
 
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
