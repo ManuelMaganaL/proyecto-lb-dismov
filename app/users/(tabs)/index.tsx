@@ -292,25 +292,37 @@ export default function HomeScreen() {
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Cerrar sesión',
-      '¿Estás seguro de que quieres cerrar sesión?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Cerrar sesión',
-          style: 'destructive',
-          onPress: async () => {
-            const { success, error } = await logout();
-            if (!success) {
-              console.log("Error logout:", error);
-            } else {
-              router.replace("/auth/login");
-            }
+    if (Platform.OS === 'web') {
+      const confirmLogout = window.confirm('¿Estás seguro de que quieres cerrar sesión?');
+      if (confirmLogout) {
+        const { success, error } = await logout();
+        if (!success) {
+          console.log("Error logout:", error);
+        } else {
+          router.replace("/auth/login");
+        }
+      }
+    } else {
+      Alert.alert(
+        'Cerrar sesión',
+        '¿Estás seguro de que quieres cerrar sesión?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Cerrar sesión',
+            style: 'destructive',
+            onPress: async () => {
+              const { success, error } = await logout();
+              if (!success) {
+                console.log("Error logout:", error);
+              } else {
+                router.replace("/auth/login");
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   return (
