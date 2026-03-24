@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react-native";
@@ -71,9 +71,11 @@ export default function EquiposScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{item.nombre}</Text>
-            </View>
+            <Pressable onPress={() => router.replace(`/admin/equipos/${item.id}`)}>
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>{item.nombre}</Text>
+              </View>
+            </Pressable>
           )}
         />
       )}
