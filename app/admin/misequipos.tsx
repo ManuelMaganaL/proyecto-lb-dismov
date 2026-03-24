@@ -13,7 +13,7 @@ import {
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+
 import { ArrowLeft } from "lucide-react-native";
 
 import { useTheme } from "@react-navigation/native";
