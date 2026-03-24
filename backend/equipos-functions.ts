@@ -9,6 +9,22 @@ export interface Equipo {
   updated_at: string;
 }
 
+export interface Teamate {
+  id: string;
+  nombre: string;
+  correo: string;
+}
+
+export interface EquipoData {
+  id: string;
+  leader: Teamate;
+  miembros: Teamate[];
+  nombre: string;
+  organizacion_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export async function fetchEquipos() {
   const { data, error } = await supabase
     .from("equipo")
