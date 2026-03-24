@@ -1,9 +1,7 @@
 import { supabase } from "@/backend/supabase/client";
 import * as FileSystem from "expo-file-system/legacy";
 import { decode } from "base64-arraybuffer";
-
 import { getUserData } from "@/backend/auth-functions";
-
 
 export interface ProfileData {
   email: string;
@@ -16,58 +14,19 @@ interface ActionResult {
   error: string | null;
 }
 
-interface ProfileUpdatePayload {
-  email?: string;
-  fullName?: string;
-  avatarUrl?: string;
-  password?: string;
+export interface OrganizacionUsuario {
+  id: string;
+  nombre: string;
+  correo: string;
+  rol_id: number;
+  equipo_nombre?: string;
+  puede_compartir?: boolean;
 }
 
-interface AvatarUploadPayload {
-  fileUri: string;
-  fileName?: string;
-  mimeType?: string;
-}
-
-interface AvatarUploadResult {
-  publicUrl: string | null;
-  error: string | null;
-}
-
-
-function inferImageContentType(fileName?: string, mimeType?: string): string {
-  if (mimeType?.startsWith("image/")) {
-    return mimeType;
-  }
-
-  const normalizedName = (fileName ?? "").toLowerCase();
-
-  if (normalizedName.endsWith(".png")) return "image/png";
-  if (normalizedName.endsWith(".webp")) return "image/webp";
-  if (normalizedName.endsWith(".heic")) return "image/heic";
-  if (normalizedName.endsWith(".heif")) return "image/heif";
-
-  return "image/jpeg";
-}
-
-function inferFileExtension(contentType: string): string {
-  if (contentType === "image/png") return "png";
-  if (contentType === "image/webp") return "webp";
-  if (contentType === "image/heic") return "heic";
-  if (contentType === "image/heif") return "heif";
-  return "jpg";
-}
-
+// --- FUNCIONES DE PERFIL ---
 export async function getProfileData() {
   const user = await getUserData();
-
-  if (!user) {
-    return {
-      data: null,
-      error: "No hay sesión activa.",
-    };
-  }
-
+  if (!user) return { data: null, error: "No hay sesión activa." };
   return {
     data: {
       email: user.email ?? "",
@@ -78,122 +37,130 @@ export async function getProfileData() {
   };
 }
 
-export async function uploadProfileAvatar(payload: AvatarUploadPayload): Promise<AvatarUploadResult> {
+export async function uploadProfileAvatar(payload: any) {
   const user = await getUserData();
-
-  if (!user) {
-    return {
-      publicUrl: null,
-      error: "No hay sesión activa.",
-    };
-  }
-
+  if (!user) return { publicUrl: null, error: "No hay sesión activa." };
   try {
-    const fileBase64 = await FileSystem.readAsStringAsync(payload.fileUri, {
-      // Some Expo runtimes do not expose EncodingType consistently.
-      encoding: "base64" as never,
-    });
+    const fileBase64 = await FileSystem.readAsStringAsync(payload.fileUri, { encoding: "base64" as never });
     const fileBuffer = decode(fileBase64);
-    const contentType = inferImageContentType(payload.fileName, payload.mimeType);
-    const extension = inferFileExtension(contentType);
     const bucket = process.env.EXPO_PUBLIC_SUPABASE_AVATARS_BUCKET || "avatars";
-    const path = `${user.id}/avatar-${Date.now()}.${extension}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(path, fileBuffer, {
-        contentType,
-        upsert: true,
-      });
-
-    if (uploadError) {
-      return {
-        publicUrl: null,
-        error: uploadError.message,
-      };
-    }
-
+    const path = `${user.id}/avatar-${Date.now()}.jpg`;
+    const { error: uploadError } = await supabase.storage.from(bucket).upload(path, fileBuffer, { contentType: "image/jpeg", upsert: true });
+    if (uploadError) return { publicUrl: null, error: uploadError.message };
     const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-
-    if (!data.publicUrl) {
-      return {
-        publicUrl: null,
-        error: "No se pudo generar la URL pública del avatar.",
-      };
-    }
-
-    return {
-      publicUrl: data.publicUrl,
-      error: null,
-    };
+    return { publicUrl: data.publicUrl, error: null };
   } catch (error) {
-    const detailedMessage = error instanceof Error ? error.message : "Error desconocido al leer el archivo.";
-    return {
-      publicUrl: null,
-      error: `Ocurrió un error al subir la imagen de perfil: ${detailedMessage}`,
-    };
+    return { publicUrl: null, error: "Error al subir la imagen." };
   }
 }
 
-export async function updateProfileData(payload: ProfileUpdatePayload): Promise<ActionResult> {
+export async function updateProfileData(payload: any) {
   const user = await getUserData();
-
-  if (!user) {
-    return {
-      success: false,
-      error: "No hay sesión activa.",
-    };
-  }
-
-  const updatePayload: {
-    email?: string;
-    password?: string;
-    data?: {
-      full_name?: string;
-      avatar_url?: string;
-    };
-  } = {};
-
-  if (typeof payload.email === "string" && payload.email.trim() && payload.email.trim() !== user.email) {
-    updatePayload.email = payload.email.trim();
-  }
-
-  if (typeof payload.password === "string" && payload.password.trim()) {
-    updatePayload.password = payload.password;
-  }
-
-  const metadataUpdates: { full_name?: string; avatar_url?: string } = {};
-
-  if (typeof payload.fullName === "string") {
-    metadataUpdates.full_name = payload.fullName.trim();
-  }
-
-  if (typeof payload.avatarUrl === "string") {
-    metadataUpdates.avatar_url = payload.avatarUrl.trim();
-  }
-
-  if (Object.keys(metadataUpdates).length > 0) {
-    updatePayload.data = metadataUpdates;
-  }
-
-  if (Object.keys(updatePayload).length === 0) {
-    return {
-      success: false,
-      error: "No hay cambios para guardar.",
-    };
-  }
-
+  if (!user) return { success: false, error: "No hay sesión activa." };
+  const updatePayload: any = { data: {} };
+  if (payload.fullName) updatePayload.data.full_name = payload.fullName.trim();
+  if (payload.avatarUrl) updatePayload.data.avatar_url = payload.avatarUrl.trim();
   const { error } = await supabase.auth.updateUser(updatePayload);
+  return { success: !error, error: error?.message || null };
+}
 
-  if (error) {
+// --- FUNCIONES DE ADMINISTRACIÓN DE ORGANIZACIÓN ---
+
+export async function getOrganizationTeams() {
+  const user = await getUserData();
+  if (!user) return { data: [], error: "No hay sesión activa." };
+  const { data: admin } = await supabase.from('usuario').select('organizacion_id').eq('id', user.id).single();
+  if (!admin?.organizacion_id) return { data: [], error: null };
+  const { data, error } = await supabase.from('equipo').select('id, nombre').eq('organizacion_id', admin.organizacion_id);
+  return { data: data || [], error: error?.message || null };
+}
+
+export async function getOrganizationMembers() {
+  const user = await getUserData();
+  if (!user) return { data: null, error: "No hay sesión activa." };
+
+  const { data: admin } = await supabase.from('usuario').select('organizacion_id').eq('id', user.id).single();
+  if (!admin?.organizacion_id) return { data: [], error: null };
+
+  const { data: usuarios, error: userError } = await supabase
+    .from('usuario')
+    .select('id, nombre, correo, rol_id, puede_compartir')
+    .eq('organizacion_id', admin.organizacion_id)
+    .in('rol_id', [1, 2, 3]);
+
+  if (userError) return { data: null, error: userError.message };
+
+  const { data: asignaciones } = await supabase
+    .from('equipo_usuario')
+    .select('usuario_id, equipo(nombre)');
+
+  const formattedData = usuarios.map(u => {
+    const asignacion = asignaciones?.find(a => a.usuario_id === u.id);
     return {
-      success: false,
-      error: error.message,
+      id: u.id,
+      nombre: u.nombre,
+      correo: u.correo,
+      rol_id: u.rol_id,
+      puede_compartir: u.puede_compartir,
+      equipo_nombre: (asignacion?.equipo as any)?.nombre || 'Sin equipo'
     };
-  }
+  });
 
-  return {
-    success: true,
-    error: null,
-  };
+  return { data: formattedData, error: null };
+}
+
+export async function getPendingInvitations() {
+  const user = await getUserData();
+  if (!user) return { data: null, error: "No hay sesión activa." };
+  const { data: admin } = await supabase.from('usuario').select('organizacion_id').eq('id', user.id).single();
+  if (!admin?.organizacion_id) return { data: [], error: null };
+
+  const { data, error } = await supabase
+    .from('usuario')
+    .select('id, nombre, correo')
+    .eq('organizacion_id', admin.organizacion_id)
+    .eq('rol_id', 4);
+
+  return { data: data || [], error: error?.message || null };
+}
+
+export async function acceptUserInvitation(userId: string): Promise<ActionResult> {
+  const { data, error } = await supabase
+    .from('usuario')
+    .update({ rol_id: 3 })
+    .eq('id', userId)
+    .select();
+
+  if (error) return { success: false, error: error.message };
+  if (!data || data.length === 0) return { success: false, error: "Permiso denegado (RLS)." };
+
+  return { success: true, error: null };
+}
+
+/**
+ * Desvincula al usuario de la organización en lugar de borrarlo.
+ */
+export async function removeUser(userId: string): Promise<ActionResult> {
+  // 1. Eliminar de equipo_usuario para que no pertenezca a ningún equipo
+  await supabase.from('equipo_usuario').delete().eq('usuario_id', userId);
+
+  // 2. Desvincular de la organización y devolver a rol Pendiente (4)
+  const { data, error } = await supabase
+    .from('usuario')
+    .update({
+      organizacion_id: null,
+      rol_id: 4
+    })
+    .eq('id', userId)
+    .select();
+
+  if (error) return { success: false, error: error.message };
+  if (!data || data.length === 0) return { success: false, error: "No se pudo desvincular al usuario." };
+
+  return { success: true, error: null };
+}
+
+export async function toggleSharePermission(userId: string, canShare: boolean): Promise<ActionResult> {
+  const { error } = await supabase.from('usuario').update({ puede_compartir: canShare }).eq('id', userId);
+  return { success: !error, error: error?.message || null };
 }
