@@ -1,4 +1,17 @@
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import { useEffect, useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  FlatList,
+  Alert,
+  Image,
+  Modal,
+  TextInput,
+  Platform,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react-native";
