@@ -15,6 +15,13 @@ export interface Teamate {
   correo: string;
 }
 
+export interface MiembroEquipo {
+  id: string;
+  nombre: string;
+  foto_url: string | null;
+  correo: string;
+}
+
 export interface EquipoData {
   id: string;
   leader: Teamate;
