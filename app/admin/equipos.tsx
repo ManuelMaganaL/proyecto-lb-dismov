@@ -141,7 +141,7 @@ export default function EquiposScreen() {
             <TouchableOpacity
               style={styles.card}
               activeOpacity={0.8}
-              onPress={() => router.replace(`/admin/equipos/${item.id}`)}
+              onPress={() => router.push(`/admin/equipos/${item.id}`)}
             >
               <View style={styles.cardHeader}>
                 <View style={styles.iconBox}>
