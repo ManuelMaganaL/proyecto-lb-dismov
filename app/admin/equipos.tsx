@@ -6,7 +6,7 @@ import { ArrowLeft, Users, X } from "lucide-react-native";
 import { useTheme } from "@/context/theme";
 import { getUserData, allowAccess } from "@/backend/auth-functions";
 import { fetchEquipos, Equipo } from "@/backend/equipos-functions";
-import { fetch_crearequipos } from "@/backend/equiposcrear-functions";
+import { fetch_crearequipos, fetchAvailableLeaders } from "@/backend/equiposcrear-functions";
 import { ROLES } from "@/constants/roles";
 
 
@@ -17,6 +17,8 @@ export default function EquiposScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [nombre, setNombre] = useState("");
   const [leaderId, setLeaderId] = useState("");
+  const [availableLeaders, setAvailableLeaders] = useState<any[]>([]);
+  const [loadingLeaders, setLoadingLeaders] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const router = useRouter();
@@ -60,11 +62,20 @@ export default function EquiposScreen() {
     }
   };
 
-  const handleOpenCreate = () => {
+  const handleOpenCreate = async () => {
     setCreateError(null);
     setNombre("");
     setLeaderId("");
     setShowCreateModal(true);
+    setLoadingLeaders(true);
+    
+    const res = await fetchAvailableLeaders();
+    if (res.success) {
+      setAvailableLeaders(res.data);
+    } else {
+      setCreateError(res.error || "Error al cargar usuarios disponibles.");
+    }
+    setLoadingLeaders(false);
   };
 
   const handleCreateEquipo = async () => {
@@ -185,15 +196,37 @@ export default function EquiposScreen() {
                 autoCapitalize="words"
               />
 
-              <Text style={[styles.label, { marginTop: 12 }]}>Líder ID</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="UUID del leader"
-                placeholderTextColor={colors.accent}
-                value={leaderId}
-                onChangeText={setLeaderId}
-                autoCapitalize="none"
-              />
+              <Text style={[styles.label, { marginTop: 12 }]}>Selecciona un líder</Text>
+              {loadingLeaders ? (
+                <ActivityIndicator style={{ marginVertical: 12 }} color={colors.primary} />
+              ) : (
+                <View style={styles.leadersListWrapper}>
+                  {availableLeaders.length === 0 ? (
+                    <Text style={styles.noLeadersText}>No hay usuarios disponibles en la organización.</Text>
+                  ) : (
+                    <FlatList
+                      data={availableLeaders}
+                      keyExtractor={(item) => item.id}
+                      style={{ maxHeight: 150 }}
+                      nestedScrollEnabled={true}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity
+                          style={[
+                            styles.leaderItem,
+                            leaderId === item.id && { borderColor: colors.primary, backgroundColor: colors.primary + '15' }
+                          ]}
+                          onPress={() => setLeaderId(item.id)}
+                        >
+                          <Text style={[styles.leaderItemName, leaderId === item.id && { color: colors.primary }]}>
+                            {item.nombre}
+                          </Text>
+                          <Text style={styles.leaderItemEmail}>{item.correo}</Text>
+                        </TouchableOpacity>
+                      )}
+                    />
+                  )}
+                </View>
+              )}
 
               <TouchableOpacity style={[styles.submitButton, creating && styles.submitButtonDisabled]} onPress={handleCreateEquipo} disabled={creating}>
                 {creating ? <ActivityIndicator color="#FFF" /> : <Text style={styles.submitButtonText}>Crear</Text>}
@@ -400,5 +433,33 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: "#FFF",
     fontWeight: "800",
     fontSize: 16,
+  },
+  leadersListWrapper: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    borderRadius: 12,
+    backgroundColor: colors.foreground,
+    overflow: "hidden",
+  },
+  noLeadersText: {
+    padding: 12,
+    color: colors.accent,
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  leaderItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.accent + '30',
+  },
+  leaderItemName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  leaderItemEmail: {
+    fontSize: 13,
+    color: colors.accent,
   },
 });

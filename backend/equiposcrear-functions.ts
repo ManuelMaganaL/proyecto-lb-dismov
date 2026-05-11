@@ -52,8 +52,8 @@ export async function fetch_crearequipos(nombre: string, leader_id: string): Pro
       return { success: false, data: null, error: "El líder no pertenece a la misma organización." };
     }
 
-    if (leaderUser?.rol_id !== ROLES.teamLeader) {
-      return { success: false, data: null, error: "El usuario indicado no es un team leader válido." };
+    if (leaderUser?.rol_id === ROLES.pending) {
+      return { success: false, data: null, error: "Un usuario pendiente no puede ser líder." };
     }
 
     const { data: created, error: insertError } = await supabase
@@ -73,5 +73,33 @@ export async function fetch_crearequipos(nombre: string, leader_id: string): Pro
     return { success: true, data: created as Equipo, error: null };
   } catch (e: any) {
     return { success: false, data: null, error: e?.message || "Error al crear el equipo." };
+  }
+}
+
+export async function fetchAvailableLeaders(): Promise<{ success: boolean; data: any[]; error: string | null }> {
+  try {
+    const user = await getUserData();
+    if (!user) return { success: false, data: [], error: "No session" };
+
+    const { data: adminUser } = await supabase
+      .from("usuario")
+      .select("organizacion_id")
+      .eq("id", user.id)
+      .single();
+
+    if (!adminUser?.organizacion_id) return { success: false, data: [], error: "No org" };
+
+    const { data, error } = await supabase
+      .from("usuario")
+      .select("id, nombre, correo")
+      .eq("organizacion_id", adminUser.organizacion_id)
+      .neq("rol_id", ROLES.pending)
+      .order("nombre", { ascending: true });
+
+    if (error) return { success: false, data: [], error: error.message };
+
+    return { success: true, data: data || [], error: null };
+  } catch (e: any) {
+    return { success: false, data: [], error: e?.message || "Error" };
   }
 }
