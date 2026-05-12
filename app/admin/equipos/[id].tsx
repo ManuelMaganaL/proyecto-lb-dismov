@@ -32,10 +32,13 @@ import {
   fetchUsuariosOrganizacionConEquipos,
   addMiembroEquipo,
   removeMiembroEquipo,
+  removeLeaderFromEquipo,
+  changeEquipoLeader,
   Equipo,
   MiembroEquipo,
   UsuarioConEquipos
 } from "@/backend/equipos-functions";
+import { fetchAvailableLeaders } from "@/backend/equiposcrear-functions";
 import { ROLES } from "@/constants/roles";
 
 export default function SingleTeamTab() {
@@ -49,13 +52,17 @@ export default function SingleTeamTab() {
   const [equipo, setEquipo] = useState<Equipo | null>(null);
   const [miembros, setMiembros] = useState<MiembroEquipo[]>([]);
 
-  // Estados del Modal de búsqueda
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<UsuarioConEquipos[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loadingSearch, setLoadingSearch] = useState(false);
 
-  // Obtenemos el ID del equipo desde la ruta
+  // Estados del Modal de Líder
+  const [showLeaderModal, setShowLeaderModal] = useState(false);
+  const [availableLeaders, setAvailableLeaders] = useState<any[]>([]);
+  const [loadingLeaders, setLoadingLeaders] = useState(false);
+  const [leaderSearchQuery, setLeaderSearchQuery] = useState("");
+
   let { id } = useLocalSearchParams();
   const equipoId = typeof id === "string" ? id : (id ? id[0] : null);
 
@@ -77,7 +84,6 @@ export default function SingleTeamTab() {
       return;
     }
 
-    // Cargar datos del equipo
     const { data: equipoData, error: equipoError } = await fetchEquipoById(equipoId);
     if (equipoError || !equipoData) {
       Alert.alert("Error", "No se pudo cargar la información del equipo.");
@@ -86,7 +92,6 @@ export default function SingleTeamTab() {
     }
     setEquipo(equipoData);
 
-    // Cargar miembros del equipo
     const { data: miembrosData, error: miembrosError } = await fetchMiembrosEquipo(equipoId);
     if (miembrosError) {
       Alert.alert("Error", "No se pudieron cargar los miembros del equipo.");
@@ -130,6 +135,47 @@ export default function SingleTeamTab() {
     );
   };
 
+  const handleChangeLeaderPress = async () => {
+    setShowLeaderModal(true);
+    setLeaderSearchQuery("");
+    setLoadingLeaders(true);
+    const { success, data, error } = await fetchAvailableLeaders();
+    if (success && data) {
+      setAvailableLeaders(data.filter(u => u.id !== equipo?.leader_id));
+    } else {
+      Alert.alert("Error", error || "No se pudieron cargar los líderes disponibles.");
+    }
+    setLoadingLeaders(false);
+  };
+
+  const handleAssignNewLeader = async (newLeaderId: string) => {
+    if (!equipo) return;
+    const { success, error } = await changeEquipoLeader(equipo.id, newLeaderId, equipo.leader_id);
+    if (success) {
+      setShowLeaderModal(false);
+      loadData();
+    } else {
+      Alert.alert("Error", error || "No se pudo cambiar el líder.");
+    }
+  };
+
+  const handleRemoveLeaderPress = () => {
+    if (!equipo || !equipo.leader_id) return;
+    Alert.alert("Eliminar Líder", "¿Estás seguro que deseas quitarle el puesto de líder a este usuario? Seguirá siendo miembro del equipo.", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Quitar puesto", style: "destructive", onPress: async () => {
+          const { success, error } = await removeLeaderFromEquipo(equipo.id, equipo.leader_id!);
+          if (success) {
+            loadData();
+          } else {
+            Alert.alert("Error", error || "No se pudo eliminar al líder.");
+          }
+        }
+      }
+    ]);
+  };
+
   const openSearchModal = async () => {
     if (!equipo || !equipo.organizacion_id) return;
 
@@ -149,7 +195,6 @@ export default function SingleTeamTab() {
 
     const { success, error } = await addMiembroEquipo(equipo.id, usuarioId);
     if (success) {
-      // Recargar la lista principal de miembros
       const { data } = await fetchMiembrosEquipo(equipo.id);
       setMiembros(data);
       setShowSearchModal(false);
@@ -199,6 +244,17 @@ export default function SingleTeamTab() {
           <View style={styles.infoSection}>
             <Text style={styles.title}>{equipo.nombre}</Text>
             <Text style={styles.desc}>Gestiona los miembros de este equipo.</Text>
+            {!equipo.leader_id ? (
+              <TouchableOpacity style={styles.assignLeaderBtn} onPress={handleChangeLeaderPress}>
+                <Crown size={16} color="#FFF" />
+                <Text style={styles.assignLeaderBtnText}>Asignar Líder</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.assignLeaderBtn} onPress={handleChangeLeaderPress}>
+                <Crown size={16} color="#FFF" />
+                <Text style={styles.assignLeaderBtnText}>Cambiar Líder</Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.divider} />
           </View>
         }
@@ -232,12 +288,22 @@ export default function SingleTeamTab() {
                 </View>
                 <Text style={styles.memberEmail}>{item.correo}</Text>
               </View>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleRemoveMember(item.id, item.nombre)}
-              >
-                <Trash2 size={16} color="#ef4444" />
-              </TouchableOpacity>
+              <View style={styles.actionsContainer}>
+                {item.id === equipo.leader_id && (
+                  <TouchableOpacity
+                    style={styles.removeLeaderBtnRight}
+                    onPress={handleRemoveLeaderPress}
+                  >
+                    <Text style={styles.removeLeaderBtnText}>Quitar Líder</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleRemoveMember(item.id, item.nombre)}
+                >
+                  <Trash2 size={16} color="#ef4444" />
+                </TouchableOpacity>
+              </View>
             </View>
             {(index < miembros.length - 1) && (
               <View style={styles.memberDivider} />
@@ -319,6 +385,69 @@ export default function SingleTeamTab() {
                         )}
                       </View>
                       <UserPlus size={20} color={colors.primary} />
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        visible={showLeaderModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowLeaderModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{equipo.leader_id ? "Cambiar Líder" : "Asignar Líder"}</Text>
+              <TouchableOpacity onPress={() => setShowLeaderModal(false)}>
+                <X size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.searchBox}>
+              <Search size={20} color={colors.accent} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar candidato por nombre o correo..."
+                placeholderTextColor={colors.accent}
+                value={leaderSearchQuery}
+                onChangeText={setLeaderSearchQuery}
+              />
+            </View>
+
+            {loadingLeaders ? (
+              <ActivityIndicator style={{ margin: 20 }} color={colors.primary} />
+            ) : (
+              <ScrollView style={styles.resultsList} keyboardShouldPersistTaps="handled">
+                {availableLeaders.filter(u =>
+                  u.nombre.toLowerCase().includes(leaderSearchQuery.toLowerCase()) ||
+                  u.correo.toLowerCase().includes(leaderSearchQuery.toLowerCase())
+                ).length === 0 ? (
+                  <Text style={styles.noResults}>No se encontraron candidatos disponibles.</Text>
+                ) : (
+                  availableLeaders.filter(u =>
+                    u.nombre.toLowerCase().includes(leaderSearchQuery.toLowerCase()) ||
+                    u.correo.toLowerCase().includes(leaderSearchQuery.toLowerCase())
+                  ).map((u) => (
+                    <TouchableOpacity
+                      key={u.id}
+                      style={styles.userResult}
+                      onPress={() => handleAssignNewLeader(u.id)}
+                    >
+                      <View style={styles.avatarSmall}>
+                        <Text style={styles.avatarInitialSmall}>
+                          {u.nombre.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={styles.resultInfo}>
+                        <Text style={styles.resultName}>{u.nombre}</Text>
+                        <Text style={styles.resultEmail}>{u.correo}</Text>
+                      </View>
+                      <Crown size={20} color={colors.primary} />
                     </TouchableOpacity>
                   ))
                 )}
@@ -445,6 +574,43 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     color: '#FFF',
+  },
+
+  assignLeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  assignLeaderBtnText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  removeLeaderBtnRight: {
+    backgroundColor: '#fee2e2',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+  },
+  removeLeaderBtnText: {
+    color: '#ef4444',
+    fontWeight: '700',
+    fontSize: 12,
   },
   deleteButton: {
     width: 36,

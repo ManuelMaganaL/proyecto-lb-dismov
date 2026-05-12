@@ -26,7 +26,6 @@ export default function EquiposScreen() {
   const { colors } = useTheme();
   const styles = createStyles(colors);
 
-  // Verifica que puedas acceder a esta pantalla con tu rol
   useEffect(() => {
     const getAccessPermission = async () => {
       const user = await getUserData();
@@ -68,7 +67,7 @@ export default function EquiposScreen() {
     setLeaderId("");
     setShowCreateModal(true);
     setLoadingLeaders(true);
-    
+
     const res = await fetchAvailableLeaders();
     if (res.success) {
       setAvailableLeaders(res.data);
