@@ -99,7 +99,7 @@ export default function OrganizacionScreen() {
 
   const filteredMiembros = miembros.filter(m => {
     const matchesSearch = m.nombre.toLowerCase().includes(search.toLowerCase());
-    const matchesEquipo = selectedEquipo === "Todos" || m.equipo_nombre === selectedEquipo;
+    const matchesEquipo = selectedEquipo === "Todos" || (m.equipos && m.equipos.includes(selectedEquipo));
     return matchesSearch && matchesEquipo;
   });
 
@@ -186,7 +186,7 @@ export default function OrganizacionScreen() {
               <View key={item.id} style={styles.card}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.nameText}>{item.nombre}</Text>
-                  <Text style={styles.subText}>{item.equipo_nombre}</Text>
+                  <Text style={styles.subText}>{item.equipos?.join(', ') || 'Sin equipo'}</Text>
                 </View>
                 <View style={styles.actionRow}>
                   <TouchableOpacity

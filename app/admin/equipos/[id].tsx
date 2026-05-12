@@ -14,6 +14,10 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import * as Haptics from 'expo-haptics';
+import { triggerHapticNotification } from "@/utils/haptics";
+import { LeaderModal } from "@/components/admin/LeaderModal";
+import { SearchMemberModal } from "@/components/admin/SearchMemberModal";
 import {
   ArrowLeft,
   Users,
@@ -125,8 +129,10 @@ export default function SingleTeamTab() {
           onPress: async () => {
             const { success, error } = await removeMiembroEquipo(equipo.id, memberId);
             if (success) {
+              triggerHapticNotification(Haptics.NotificationFeedbackType.Success);
               setMiembros(prev => prev.filter(m => m.id !== memberId));
             } else {
+              triggerHapticNotification(Haptics.NotificationFeedbackType.Error);
               Alert.alert("Error", error || "No se pudo eliminar al miembro.");
             }
           }
@@ -152,9 +158,11 @@ export default function SingleTeamTab() {
     if (!equipo) return;
     const { success, error } = await changeEquipoLeader(equipo.id, newLeaderId, equipo.leader_id);
     if (success) {
+      triggerHapticNotification(Haptics.NotificationFeedbackType.Success);
       setShowLeaderModal(false);
       loadData();
     } else {
+      triggerHapticNotification(Haptics.NotificationFeedbackType.Error);
       Alert.alert("Error", error || "No se pudo cambiar el líder.");
     }
   };
@@ -167,8 +175,10 @@ export default function SingleTeamTab() {
         text: "Quitar puesto", style: "destructive", onPress: async () => {
           const { success, error } = await removeLeaderFromEquipo(equipo.id, equipo.leader_id!);
           if (success) {
+            triggerHapticNotification(Haptics.NotificationFeedbackType.Success);
             loadData();
           } else {
+            triggerHapticNotification(Haptics.NotificationFeedbackType.Error);
             Alert.alert("Error", error || "No se pudo eliminar al líder.");
           }
         }
@@ -195,10 +205,12 @@ export default function SingleTeamTab() {
 
     const { success, error } = await addMiembroEquipo(equipo.id, usuarioId);
     if (success) {
+      triggerHapticNotification(Haptics.NotificationFeedbackType.Success);
       const { data } = await fetchMiembrosEquipo(equipo.id);
       setMiembros(data);
       setShowSearchModal(false);
     } else {
+      triggerHapticNotification(Haptics.NotificationFeedbackType.Error);
       Alert.alert("Error", error || "No se pudo añadir al miembro.");
     }
   };
@@ -324,138 +336,29 @@ export default function SingleTeamTab() {
         }
       />
 
-      {/* Modal para añadir miembros */}
-      <Modal
+      {/* Modales extraídos a componentes independientes */}
+      <SearchMemberModal
         visible={showSearchModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowSearchModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Añadir a la organización</Text>
-              <TouchableOpacity onPress={() => setShowSearchModal(false)}>
-                <X size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
+        onClose={() => setShowSearchModal(false)}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        loading={loadingSearch}
+        availableUsers={availableUsers}
+        onAddMember={handleAddMember}
+        colors={colors}
+      />
 
-            <View style={styles.searchBox}>
-              <Search size={20} color={colors.accent} style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Buscar por nombre o correo..."
-                placeholderTextColor={colors.accent}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
-
-            {loadingSearch ? (
-              <ActivityIndicator style={{ margin: 20 }} color={colors.primary} />
-            ) : (
-              <ScrollView style={styles.resultsList} keyboardShouldPersistTaps="handled">
-                {filteredUsers.length === 0 ? (
-                  <Text style={styles.noResults}>No se encontraron usuarios disponibles.</Text>
-                ) : (
-                  filteredUsers.map((u) => (
-                    <TouchableOpacity
-                      key={u.id}
-                      style={styles.userResult}
-                      onPress={() => handleAddMember(u.id)}
-                    >
-                      <View style={styles.avatarSmall}>
-                        <Text style={styles.avatarInitialSmall}>
-                          {u.nombre.charAt(0).toUpperCase()}
-                        </Text>
-                      </View>
-                      <View style={styles.resultInfo}>
-                        <Text style={styles.resultName}>{u.nombre}</Text>
-                        <Text style={styles.resultEmail}>{u.correo}</Text>
-
-                        {/* Badges de otros equipos */}
-                        {u.equipos && u.equipos.length > 0 && (
-                          <View style={styles.badgeContainer}>
-                            {u.equipos.map((equipoNombre, idx) => (
-                              <View key={idx} style={styles.teamBadge}>
-                                <Text style={styles.teamBadgeText}>{equipoNombre}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        )}
-                      </View>
-                      <UserPlus size={20} color={colors.primary} />
-                    </TouchableOpacity>
-                  ))
-                )}
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
-      <Modal
+      <LeaderModal
         visible={showLeaderModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowLeaderModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{equipo.leader_id ? "Cambiar Líder" : "Asignar Líder"}</Text>
-              <TouchableOpacity onPress={() => setShowLeaderModal(false)}>
-                <X size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.searchBox}>
-              <Search size={20} color={colors.accent} style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Buscar candidato por nombre o correo..."
-                placeholderTextColor={colors.accent}
-                value={leaderSearchQuery}
-                onChangeText={setLeaderSearchQuery}
-              />
-            </View>
-
-            {loadingLeaders ? (
-              <ActivityIndicator style={{ margin: 20 }} color={colors.primary} />
-            ) : (
-              <ScrollView style={styles.resultsList} keyboardShouldPersistTaps="handled">
-                {availableLeaders.filter(u =>
-                  u.nombre.toLowerCase().includes(leaderSearchQuery.toLowerCase()) ||
-                  u.correo.toLowerCase().includes(leaderSearchQuery.toLowerCase())
-                ).length === 0 ? (
-                  <Text style={styles.noResults}>No se encontraron candidatos disponibles.</Text>
-                ) : (
-                  availableLeaders.filter(u =>
-                    u.nombre.toLowerCase().includes(leaderSearchQuery.toLowerCase()) ||
-                    u.correo.toLowerCase().includes(leaderSearchQuery.toLowerCase())
-                  ).map((u) => (
-                    <TouchableOpacity
-                      key={u.id}
-                      style={styles.userResult}
-                      onPress={() => handleAssignNewLeader(u.id)}
-                    >
-                      <View style={styles.avatarSmall}>
-                        <Text style={styles.avatarInitialSmall}>
-                          {u.nombre.charAt(0).toUpperCase()}
-                        </Text>
-                      </View>
-                      <View style={styles.resultInfo}>
-                        <Text style={styles.resultName}>{u.nombre}</Text>
-                        <Text style={styles.resultEmail}>{u.correo}</Text>
-                      </View>
-                      <Crown size={20} color={colors.primary} />
-                    </TouchableOpacity>
-                  ))
-                )}
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowLeaderModal(false)}
+        title={equipo.leader_id ? "Cambiar Líder" : "Asignar Líder"}
+        searchQuery={leaderSearchQuery}
+        setSearchQuery={setLeaderSearchQuery}
+        loading={loadingLeaders}
+        availableLeaders={availableLeaders}
+        onAssignLeader={handleAssignNewLeader}
+        colors={colors}
+      />
     </View>
   );
 }
@@ -647,115 +550,5 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.text,
     textAlign: 'center',
     maxWidth: '80%',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: '80%',
-    padding: 20,
-    borderWidth: 1,
-    borderColor: colors.accent,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: colors.text,
-  },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.foreground,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: colors.accent,
-    marginBottom: 20,
-  },
-  searchIcon: {
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    height: 48,
-    fontSize: 16,
-    color: colors.text,
-  },
-  resultsList: {
-    flex: 1,
-  },
-  userResult: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    backgroundColor: colors.foreground,
-    borderWidth: 1,
-    borderColor: colors.accent + '20',
-  },
-  avatarSmall: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  avatarInitialSmall: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: '#FFF',
-  },
-  resultInfo: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  resultName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: 2,
-  },
-  resultEmail: {
-    fontSize: 14,
-    color: colors.accent,
-    marginBottom: 6,
-  },
-  badgeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  teamBadge: {
-    backgroundColor: colors.primary + '20',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: colors.primary + '40',
-  },
-  teamBadgeText: {
-    fontSize: 11,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  noResults: {
-    textAlign: 'center',
-    marginTop: 40,
-    color: colors.accent,
-    fontSize: 16,
   },
 });

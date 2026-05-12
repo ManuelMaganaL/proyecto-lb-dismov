@@ -14,6 +14,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import * as CryptoJS from "crypto-js";
+import { decryptData } from "@/utils/crypto";
 
 import {
   consumeEncryptedDato,
@@ -152,8 +153,7 @@ export default function MisClavesScreen() {
         );
       }
 
-      const bytes = CryptoJS.AES.decrypt(encryptedPayload, secretKey);
-      const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+      const decrypted = decryptData(encryptedPayload, secretKey);
 
       if (!decrypted) {
         setError("");

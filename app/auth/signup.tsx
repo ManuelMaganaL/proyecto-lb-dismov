@@ -2,6 +2,8 @@ import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View, Text, StyleSheet, Image, TouchableOpacity, Modal, FlatList } from "react-native";
 import { ChevronDown } from "lucide-react-native";
+import * as Haptics from 'expo-haptics';
+import { triggerHapticNotification } from "@/utils/haptics";
 
 import { useTheme } from "@/context/theme";
 import { ThemeColors } from "@/constants/colors";
@@ -72,6 +74,7 @@ export default function SignupPage() {
     setIsSubmitting(true);
 
     if (password !== confirmPassword) {
+      triggerHapticNotification(Haptics.NotificationFeedbackType.Warning);
       setError("Las contraseñas no coinciden");
       setTimeout(() => setError(null), 5000);
       setConfirmPassword("");
@@ -80,6 +83,7 @@ export default function SignupPage() {
     }
 
     if (!selectedOrg) {
+      triggerHapticNotification(Haptics.NotificationFeedbackType.Warning);
       setError("Selecciona una organización");
       setIsSubmitting(false);
       return;
@@ -87,11 +91,13 @@ export default function SignupPage() {
 
     const { data, error } = await signup(name, email, password, selectedOrg.id);
     if (error || !data) {
+      triggerHapticNotification(Haptics.NotificationFeedbackType.Error);
       setError(error || "No se pudo registrar el usuario");
       setPassword("");
       setEmail("");
       setTimeout(() => setError(null), 5000);
     } else {
+      triggerHapticNotification(Haptics.NotificationFeedbackType.Success);
       router.replace("/auth/usuarios-link");
     }
 
@@ -279,21 +285,21 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   card: {
     width: '100%',
-    backgroundColor: colors.background,
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
     padding: 24,
     borderWidth: 1.5,
-    borderColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    borderColor: colors.foreground,
+    shadowColor: colors.text,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
     elevation: 3,
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.text,
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -336,11 +342,12 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     letterSpacing: 0.3,
   },
   orgSelector: {
-    height: 48,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: colors.accent,
+    height: 52,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1.5,
+    borderColor: colors.foreground,
+    backgroundColor: colors.surface,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

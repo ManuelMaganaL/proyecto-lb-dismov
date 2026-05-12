@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, 
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Eraser } from 'lucide-react-native';
 import * as CryptoJS from 'crypto-js';
+import { encryptData } from '@/utils/crypto';
 import { getUserTargetOptions, saveEncryptedDato, UserTargetOption } from '@/backend/crypt-functions';
 import { useTheme } from '@/context/theme';
 import { ThemeColors } from '@/constants/colors';
@@ -199,7 +200,7 @@ const IngresarDato = () => {
       }
 
       // Encriptar el dato
-      const encrypted = CryptoJS.AES.encrypt(dato, secretKey).toString();
+      const encrypted = encryptData(dato, secretKey);
 
       const normalizedTitulo = titulo.trim() || 'Clave compartida';
       const parsedMaxVistas = Number.parseInt(maxVistas, 10);

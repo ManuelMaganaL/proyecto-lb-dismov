@@ -19,7 +19,7 @@ export interface OrganizacionUsuario {
   nombre: string;
   correo: string;
   rol_id?: number;
-  equipo_nombre?: string;
+  equipos?: string[];
   puede_compartir?: boolean;
 }
 
@@ -99,25 +99,29 @@ export async function getOrganizationMembers() {
 
   const { data: usuarios, error: userError } = await supabase
     .from('usuario')
-    .select('id, nombre, correo, rol_id, puede_compartir')
+    .select(`
+      id, nombre, correo, rol_id, puede_compartir,
+      equipo_usuario (
+        equipo!equipo_usuario_equipo_id_fkey (nombre)
+      )
+    `)
     .eq('organizacion_id', admin.organizacion_id)
     .in('rol_id', [1, 2, 3]);
 
   if (userError) return { data: null, error: userError.message };
 
-  const { data: asignaciones } = await supabase
-    .from('equipo_usuario')
-    .select('usuario_id, equipo(nombre)');
-
-  const formattedData = usuarios.map(u => {
-    const asignacion = asignaciones?.find(a => a.usuario_id === u.id);
+  const formattedData = (usuarios ?? []).map((u: any) => {
+    const equiposNombres = u.equipo_usuario
+      ?.filter((eu: any) => eu.equipo && eu.equipo.nombre)
+      ?.map((eu: any) => eu.equipo.nombre) || [];
+    
     return {
       id: u.id,
       nombre: u.nombre,
       correo: u.correo,
       rol_id: u.rol_id,
       puede_compartir: u.puede_compartir,
-      equipo_nombre: (asignacion?.equipo as any)?.nombre || 'Sin equipo'
+      equipos: equiposNombres.length > 0 ? equiposNombres : ['Sin equipo'],
     };
   });
 

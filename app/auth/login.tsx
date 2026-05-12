@@ -1,6 +1,8 @@
 import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View, Text, StyleSheet, Image } from "react-native";
+import * as Haptics from 'expo-haptics';
+import { triggerHapticNotification } from "@/utils/haptics";
 
 import { useTheme } from "@/context/theme";
 import { ThemeColors } from "@/constants/colors";
@@ -46,11 +48,13 @@ export default function LoginPage() {
     setIsSubmitting(true);
     const { data, error } = await login(email, password);
     if (error || !data) {
+      triggerHapticNotification(Haptics.NotificationFeedbackType.Error);
       setError(error || "No se pudo iniciar sesión");
       setPassword("");
       setEmail("");
       setTimeout(() => setError(null), 5000);
     } else {
+      triggerHapticNotification(Haptics.NotificationFeedbackType.Success);
       router.replace("/auth/usuarios-link");
     }
     setIsSubmitting(false);
@@ -155,21 +159,21 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   card: {
     width: '100%',
-    backgroundColor: colors.background,
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
     padding: 24,
     borderWidth: 1.5,
-    borderColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    borderColor: colors.foreground,
+    shadowColor: colors.text,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
     elevation: 3,
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.text,
     marginBottom: 20,
     textAlign: 'center',
   },
