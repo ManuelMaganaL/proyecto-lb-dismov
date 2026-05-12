@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { ArrowLeft, Check, X, Search, Trash2, Users, UserPlus, Key } from "lucide-react-native";
 
 import { useTheme } from "@/context/theme";
+import { ThemeColors } from "@/constants/colors";
 import {
   getOrganizationMembers,
   getPendingInvitations,
@@ -227,7 +228,7 @@ export default function OrganizacionScreen() {
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 15 },
   headerTitle: { fontSize: 20, fontWeight: 'bold', marginLeft: 15, color: colors.text },

@@ -7,6 +7,7 @@ import {
 } from "react-native";
 
 import { useTheme } from "@/context/theme";
+import { ThemeColors } from "@/constants/colors";
 
 export interface InputProps extends TextInputProps {
   label?: string;
@@ -36,7 +37,7 @@ export function Input({
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     width: "100%",
     marginBottom: 12,
@@ -49,12 +50,14 @@ const createStyles = (colors: any) => StyleSheet.create({
     letterSpacing: 0.3,
   },
   input: {
-    height: 48,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    borderWidth: 1,
+    height: 52,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1.5,
     fontSize: 16,
-    borderColor: colors.accent,
+    backgroundColor: colors.surface,
+    color: colors.text,
+    borderColor: colors.foreground,
   },
   error: {
     marginTop: 4,

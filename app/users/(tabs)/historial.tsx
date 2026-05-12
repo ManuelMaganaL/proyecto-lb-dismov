@@ -23,9 +23,13 @@ import {
   updateEncryptedDato,
 } from "@/backend/crypt-functions";
 import { getUserData } from "@/backend/auth-functions";
+import { useTheme } from "@/context/theme";
+import { ThemeColors } from "@/constants/colors";
 
 export default function MisClavesScreen() {
   const tabBarHeight = useBottomTabBarHeight();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [items, setItems] = useState<EncryptedClaveItem[]>([]);
   const [activeFilter, setActiveFilter] = useState<"enviadas" | "recibidas">("recibidas");
   const [myUserId, setMyUserId] = useState<string>("");
@@ -276,7 +280,8 @@ export default function MisClavesScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mis claves cifradas</Text>
+      <Text style={styles.title}>Historial</Text>
+      <Text style={styles.subtitle}>Consulta y gestiona tus claves cifradas.</Text>
 
       <View style={styles.filterRow}>
         <TouchableOpacity
@@ -333,6 +338,7 @@ export default function MisClavesScreen() {
             onConfirmDelete={handleConfirmDelete}
             onEditTituloChange={setEditTitulo}
             onEditDatoChange={setEditDatoPlano}
+            colors={colors}
           />
         )}
       />
@@ -358,6 +364,7 @@ interface SwipeableCardProps {
   onConfirmDelete: (item: EncryptedClaveItem) => void;
   onEditTituloChange: (text: string) => void;
   onEditDatoChange: (text: string) => void;
+  colors: ThemeColors;
 }
 
 const SwipeableCard = ({
@@ -378,7 +385,9 @@ const SwipeableCard = ({
   onConfirmDelete,
   onEditTituloChange,
   onEditDatoChange,
+  colors,
 }: SwipeableCardProps) => {
+  const styles = createStyles(colors);
   const pan = useRef(new Animated.ValueXY()).current;
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canEdit = activeFilter === "enviadas" && !isExpired;
@@ -557,16 +566,23 @@ const SwipeableCard = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    padding: 16,
+    backgroundColor: colors.background,
+    padding: 20,
+    paddingTop: 20,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 12,
+    fontSize: 30,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  subtitle: {
+    marginTop: 8,
+    marginBottom: 20,
+    color: colors.accent,
+    fontSize: 15,
   },
   filterRow: {
     flexDirection: "row",
@@ -576,25 +592,25 @@ const styles = StyleSheet.create({
   filterButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#cbd5e1",
+    borderColor: colors.foreground,
     borderRadius: 8,
     paddingVertical: 8,
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.surface,
   },
   filterButtonActive: {
-    borderColor: "#0f766e",
-    backgroundColor: "#ccfbf1",
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '20',
   },
   filterText: {
-    color: "#334155",
+    color: colors.accent,
     fontWeight: "600",
   },
   filterTextActive: {
-    color: "#115e59",
+    color: colors.primary,
   },
   refreshButton: {
-    backgroundColor: "#1f2937",
+    backgroundColor: colors.primary,
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: "center",
@@ -616,15 +632,20 @@ const styles = StyleSheet.create({
   },
   empty: {
     marginTop: 24,
-    color: "#6b7280",
+    color: colors.accent,
   },
   card: {
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 12,
-    padding: 12,
-    backgroundColor: "#f9fafb",
+    borderWidth: 1.5,
+    borderColor: colors.foreground,
+    borderRadius: 16,
+    padding: 16,
+    backgroundColor: colors.surface,
     width: "100%",
+    shadowColor: colors.text,
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   cardDisabled: {
     opacity: 1,
@@ -635,6 +656,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: "600",
+    color: colors.text,
     textDecorationLine: "none",
   },
   cardTitleDisabled: {
@@ -642,7 +664,7 @@ const styles = StyleSheet.create({
   },
   cardEncrypted: {
     marginTop: 8,
-    color: "#374151",
+    color: colors.accent,
     fontSize: 12,
   },
   cardEncryptedDisabled: {
@@ -651,12 +673,12 @@ const styles = StyleSheet.create({
   cardDate: {
     marginTop: 8,
     fontSize: 12,
-    color: "#6b7280",
+    color: colors.accent,
   },
   viewsInfo: {
     marginTop: 6,
     fontSize: 12,
-    color: "#0f172a",
+    color: colors.text,
     fontWeight: "500",
   },
   expiryInfo: {
@@ -665,14 +687,14 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   expiryInfoExpired: {
-    color: "#991b1b",
+    color: colors.danger,
   },
   expiryInfoActive: {
-    color: "#0f6b2f",
+    color: colors.success,
   },
   decryptButton: {
     marginTop: 10,
-    backgroundColor: "#0f766e",
+    backgroundColor: colors.primary,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 10,
@@ -689,7 +711,7 @@ const styles = StyleSheet.create({
   },
   editButton: {
     marginTop: 10,
-    backgroundColor: "#1d4ed8",
+    backgroundColor: colors.links,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 10,
@@ -697,7 +719,7 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     marginTop: 10,
-    backgroundColor: "#b91c1c",
+    backgroundColor: colors.danger,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 10,
@@ -710,19 +732,20 @@ const styles = StyleSheet.create({
   editBox: {
     marginTop: 10,
     borderWidth: 1,
-    borderColor: "#dbeafe",
-    backgroundColor: "#eff6ff",
+    borderColor: colors.foreground,
+    backgroundColor: colors.surface,
     borderRadius: 10,
     padding: 10,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#cbd5e1",
+    borderColor: colors.foreground,
     borderRadius: 8,
-    backgroundColor: "#fff",
+    backgroundColor: colors.background,
     paddingHorizontal: 10,
     paddingVertical: 8,
     marginBottom: 8,
+    color: colors.text,
   },
   editActionsRow: {
     flexDirection: "row",
@@ -730,14 +753,14 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 1,
-    backgroundColor: "#0f766e",
+    backgroundColor: colors.primary,
     borderRadius: 8,
     paddingVertical: 9,
     alignItems: "center",
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: "#64748b",
+    backgroundColor: colors.accent,
     borderRadius: 8,
     paddingVertical: 9,
     alignItems: "center",
@@ -749,20 +772,21 @@ const styles = StyleSheet.create({
   decryptedBox: {
     marginTop: 10,
     borderRadius: 8,
-    backgroundColor: "#ecfeff",
+    backgroundColor: colors.primary + '15',
     borderWidth: 1,
-    borderColor: "#99f6e4",
+    borderColor: colors.primary + '40',
     padding: 10,
   },
   decryptedLabel: {
     fontWeight: "600",
     marginBottom: 6,
+    color: colors.text,
   },
   decryptedText: {
-    color: "#111827",
+    color: colors.text,
   },
   error: {
-    color: "#b91c1c",
+    color: colors.danger,
     marginTop: 10,
   },
   toast: {
@@ -772,23 +796,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   toastSuccess: {
-    backgroundColor: "#dcfce7",
+    backgroundColor: colors.success + '25',
     borderWidth: 1,
-    borderColor: "#86efac",
+    borderColor: colors.success,
   },
   toastError: {
-    backgroundColor: "#fee2e2",
+    backgroundColor: colors.danger + '25',
     borderWidth: 1,
-    borderColor: "#fca5a5",
+    borderColor: colors.danger,
   },
   toastText: {
-    color: "#111827",
+    color: colors.text,
     fontWeight: "500",
   },
   swipeContainer: {
     position: "relative",
     overflow: "hidden",
-    borderRadius: 12,
+    borderRadius: 16,
   },
   swipeDeleteBackground: {
     position: "absolute",
@@ -796,8 +820,8 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 100,
-    backgroundColor: "#b91c1c",
-    borderRadius: 12,
+    backgroundColor: colors.danger,
+    borderRadius: 16,
     zIndex: 0,
   },
   swipeDeleteButton: {
@@ -821,8 +845,8 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 100,
-    backgroundColor: "#1d4ed8",
-    borderRadius: 12,
+    backgroundColor: colors.links,
+    borderRadius: 16,
     zIndex: 0,
   },
   swipeEditButton: {

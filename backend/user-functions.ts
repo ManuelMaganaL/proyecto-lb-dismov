@@ -27,10 +27,25 @@ export interface OrganizacionUsuario {
 export async function getProfileData() {
   const user = await getUserData();
   if (!user) return { data: null, error: "No hay sesión activa." };
+
+  // Nombre desde user_metadata (Auth)
+  const metaName = ((user.user_metadata?.full_name as string) ?? "").trim();
+
+  // Fallback: leer nombre desde la tabla usuario
+  let dbName = "";
+  if (!metaName) {
+    const { data: row } = await supabase
+      .from("usuario")
+      .select("nombre")
+      .eq("id", user.id)
+      .single();
+    dbName = ((row?.nombre as string) ?? "").trim();
+  }
+
   return {
     data: {
       email: user.email ?? "",
-      fullName: (user.user_metadata?.full_name as string) ?? "",
+      fullName: metaName || dbName,
       avatarUrl: (user.user_metadata?.avatar_url as string) ?? "",
     } as ProfileData,
     error: null,

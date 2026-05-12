@@ -5,13 +5,15 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { supabase } from "@/backend/supabase/client";
 import { getUserData } from "@/backend/auth-functions";
+import { ThemeProvider, useTheme } from "@/context/theme";
 
-export default function RootLayout() {
+function RootContent() {
   const router = useRouter();
   const segments = useSegments();
   const segmentsRef = useRef(segments);
   segmentsRef.current = segments;
 
+  const { colors } = useTheme();
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
   const isAuthRoute = useMemo(() => segments[0] === "auth", [segments]);
@@ -63,15 +65,23 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
         {isCheckingSession ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <ActivityIndicator />
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
+            <ActivityIndicator color={colors.primary} />
           </View>
         ) : (
           <Stack screenOptions={{ headerShown: false }} />
         )}
       </SafeAreaView>
     </SafeAreaProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootContent />
+    </ThemeProvider>
   );
 }

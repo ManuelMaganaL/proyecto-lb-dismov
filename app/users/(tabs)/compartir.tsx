@@ -5,8 +5,12 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { Eraser } from 'lucide-react-native';
 import * as CryptoJS from 'crypto-js';
 import { getUserTargetOptions, saveEncryptedDato, UserTargetOption } from '@/backend/crypt-functions';
+import { useTheme } from '@/context/theme';
+import { ThemeColors } from '@/constants/colors';
 
 const IngresarDato = () => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const MAX_TITULO_LENGTH = 80;
   const MAX_CLAVE_LENGTH = 280;
 
@@ -253,10 +257,8 @@ const IngresarDato = () => {
       contentContainerStyle={styles.containerContent}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={styles.heroCard}>
-        <Text style={styles.title}>Ingresar Claves</Text>
-        <Text style={styles.subtitle}>Configura destino, limite y caducidad.</Text>
-      </View>
+      <Text style={styles.title}>Compartir Claves</Text>
+      <Text style={styles.subtitle}>Configura destino, límite y caducidad.</Text>
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Informacion de la Clave</Text>
@@ -410,47 +412,40 @@ const IngresarDato = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   containerContent: {
     justifyContent: 'flex-start',
     alignItems: 'stretch',
-    padding: 18,
+    padding: 20,
+    paddingTop: 20,
     paddingBottom: 28,
   },
-  heroCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    backgroundColor: '#ffffff',
-    padding: 16,
-    marginBottom: 12,
-  },
   card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#dbeafe',
-    backgroundColor: '#ffffff',
-    padding: 16,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.foreground,
+    backgroundColor: colors.surface,
+    padding: 20,
+    shadowColor: colors.text,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   title: {
-    fontSize: 24,
+    fontSize: 30,
     fontWeight: '700',
-    color: '#0b1220',
+    color: colors.text,
   },
   subtitle: {
-    marginTop: 6,
-    marginBottom: 2,
-    color: '#334155',
-    lineHeight: 20,
+    marginTop: 8,
+    marginBottom: 20,
+    color: colors.accent,
+    fontSize: 15,
   },
   sectionTitle: {
     marginTop: 6,
@@ -458,45 +453,45 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.3,
-    color: '#0f766e',
+    color: colors.primary,
   },
   input: {
     width: '100%',
     paddingHorizontal: 12,
     paddingVertical: 11,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: colors.foreground,
     borderRadius: 10,
     marginBottom: 12,
-    backgroundColor: '#f8fafc',
-    color: '#0f172a',
+    backgroundColor: colors.surface,
+    color: colors.text,
   },
   selectorButton: {
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: colors.foreground,
     borderRadius: 10,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.surface,
     paddingVertical: 10,
     paddingHorizontal: 12,
     marginBottom: 10,
   },
   selectorButtonSelected: {
-    backgroundColor: '#dcfce7',
-    borderColor: '#15803d',
+    backgroundColor: colors.success + '30',
+    borderColor: colors.success,
   },
   selectorButtonText: {
-    color: '#0f172a',
+    color: colors.text,
     fontWeight: '600',
   },
   selectorButtonHint: {
     marginTop: 2,
-    color: '#64748b',
+    color: colors.accent,
     fontSize: 12,
   },
   targetsBox: {
     borderWidth: 1,
-    borderColor: '#bfdbfe',
-    backgroundColor: '#eff6ff',
+    borderColor: colors.foreground,
+    backgroundColor: colors.surface,
     borderRadius: 10,
     marginBottom: 10,
     maxHeight: 210,
@@ -504,17 +499,18 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: colors.foreground,
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     paddingHorizontal: 10,
     paddingVertical: 8,
     marginHorizontal: 10,
     marginBottom: 6,
+    color: colors.text,
   },
   targetHint: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.accent,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
@@ -522,18 +518,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#bfdbfe',
+    borderTopColor: colors.foreground,
   },
   targetsList: {
     maxHeight: 104,
   },
   targetName: {
-    color: '#0f172a',
+    color: colors.text,
     fontWeight: '600',
   },
   targetEmail: {
     marginTop: 2,
-    color: '#334155',
+    color: colors.accent,
     fontSize: 12,
   },
   rowFields: {
@@ -548,16 +544,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.3,
-    color: '#0f766e',
+    color: colors.primary,
   },
   inlineHint: {
     marginTop: -6,
     marginBottom: 10,
-    color: '#475569',
+    color: colors.accent,
     fontSize: 12,
   },
   inlineHintError: {
-    color: '#b91c1c',
+    color: colors.danger,
     fontWeight: '600',
   },
   charCounter: {
@@ -573,29 +569,29 @@ const styles = StyleSheet.create({
   dateInput: {
     width: '100%',
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: colors.foreground,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 11,
     marginBottom: 6,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.surface,
   },
   dateValueText: {
-    color: '#0f172a',
+    color: colors.text,
   },
   datePlaceholderText: {
-    color: '#94a3b8',
+    color: colors.accent,
   },
   dateClearText: {
     marginBottom: 6,
-    color: '#0f766e',
+    color: colors.primary,
     fontSize: 12,
     fontWeight: '600',
   },
   submitButton: {
     marginTop: 4,
     borderRadius: 12,
-    backgroundColor: '#0f766e',
+    backgroundColor: colors.primary,
     minHeight: 46,
     alignItems: 'center',
     justifyContent: 'center',
@@ -619,8 +615,8 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
+    borderColor: colors.danger,
+    backgroundColor: colors.background,
   },
   submitText: {
     color: '#ffffff',
@@ -629,7 +625,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   helpTextInline: {
-    color: '#94a3b8',
+    color: colors.accent,
     fontSize: 11,
     marginTop: -4,
     marginBottom: 8,
@@ -642,12 +638,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   ok: {
-    color: '#065f46',
-    backgroundColor: '#d1fae5',
+    color: colors.success,
+    backgroundColor: colors.success + '20',
   },
   fail: {
-    color: '#991b1b',
-    backgroundColor: '#fee2e2',
+    color: colors.danger,
+    backgroundColor: colors.danger + '20',
   },
 });
 

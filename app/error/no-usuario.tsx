@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from "react-native";
 import { Mail } from "lucide-react-native";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/context/theme";
+import { ThemeColors } from "@/constants/colors";
 
 import { Button } from "@/components/ui/button";
 import { logout } from "@/backend/auth-functions";
@@ -31,7 +32,7 @@ export default function NoUsuario() {
   );
 }
 
-const createStyles = (colors: any) =>
+const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       flex: 1,

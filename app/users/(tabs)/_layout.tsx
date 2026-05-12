@@ -15,7 +15,7 @@ export default function TabsLayout() {
     async function fetchUser() {
       const user = await getUserData();
       if (user) {
-        const canAccess = await allowAccess(user.id, ROLES.admin);
+        const canAccess = await allowAccess(user.id, ROLES.teamLeader);
         if (canAccess) {
           setShowAdmin(true);
         }
@@ -26,6 +26,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      initialRouteName="historial"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
@@ -52,13 +53,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="historial"
-        options={{
-          title: "Historial",
-          tabBarIcon: ({ color, size }) => <KeyRound size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="compartir"
         options={{
           title: "Compartir",
@@ -66,9 +60,17 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="historial"
+        options={{
+          title: "Historial",
+          tabBarIcon: ({ color, size }) => <KeyRound size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="administrar"
         options={{
           title: "Administrar",
+          href: showAdmin ? undefined : null,
           tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
         }}
       />

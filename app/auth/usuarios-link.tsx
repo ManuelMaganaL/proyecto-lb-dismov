@@ -19,7 +19,7 @@ export default function UsuariosLink() {
       
       const canAccess = await allowAccess(user.id, ROLES.user);
       if (canAccess) {
-        router.replace("/users/(tabs)");
+        router.replace("/users/(tabs)/historial");
       } else {
         router.replace("/error/no-usuario");
       }

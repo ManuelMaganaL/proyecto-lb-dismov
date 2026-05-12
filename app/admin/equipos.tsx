@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Users, X } from "lucide-react-native";
 
 import { useTheme } from "@/context/theme";
+import { ThemeColors } from "@/constants/colors";
 import { getUserData, allowAccess } from "@/backend/auth-functions";
 import { fetchEquipos, Equipo } from "@/backend/equipos-functions";
 import { fetch_crearequipos, fetchAvailableLeaders } from "@/backend/equiposcrear-functions";
@@ -239,7 +240,7 @@ export default function EquiposScreen() {
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   loadingRoot: {
     flex: 1,
     alignItems: "center",

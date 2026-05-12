@@ -27,6 +27,7 @@ import {
 } from "lucide-react-native";
 
 import { useTheme } from "@/context/theme";
+import { ThemeColors } from "@/constants/colors";
 import { getUserData, allowAccess } from "@/backend/auth-functions";
 import {
   fetchMisEquipos,
@@ -361,7 +362,7 @@ export default function MisEquiposScreen() {
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   loadingRoot: {
     flex: 1,
     alignItems: "center",

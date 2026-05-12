@@ -1,12 +1,14 @@
 import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, View, Text, StyleSheet, Image } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View, Text, StyleSheet, Image, TouchableOpacity, Modal, FlatList } from "react-native";
+import { ChevronDown } from "lucide-react-native";
 
 import { useTheme } from "@/context/theme";
+import { ThemeColors } from "@/constants/colors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { getUserData, signup } from "@/backend/auth-functions";
+import { getUserData, signup, fetchOrganizaciones, Organizacion } from "@/backend/auth-functions";
 import { validateEmail } from "@/utils/form-validation";
 
 export default function SignupPage() {
@@ -16,7 +18,12 @@ export default function SignupPage() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [org, setOrg] = useState<string>("");
+
+  // Organización
+  const [organizaciones, setOrganizaciones] = useState<Organizacion[]>([]);
+  const [selectedOrg, setSelectedOrg] = useState<Organizacion | null>(null);
+  const [showOrgPicker, setShowOrgPicker] = useState(false);
+  const [loadingOrgs, setLoadingOrgs] = useState(true);
 
   const [isDisabled, setIsDisabled] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +42,16 @@ export default function SignupPage() {
     checkUser();
   }, [])
 
+  // Cargar organizaciones al montar
+  useEffect(() => {
+    const loadOrgs = async () => {
+      const { data } = await fetchOrganizaciones();
+      setOrganizaciones(data);
+      setLoadingOrgs(false);
+    };
+    loadOrgs();
+  }, []);
+
   useEffect(() => {
     const isValidEmail = validateEmail(email);
     if (
@@ -43,13 +60,13 @@ export default function SignupPage() {
       confirmPassword.length >= 8 &&
       password === confirmPassword &&
       name.length > 0 &&
-      org.length > 0
+      selectedOrg !== null
     ) {
       setIsDisabled(false);
     } else {
       setIsDisabled(true);
     }
-  }, [name, email, password, confirmPassword, org])
+  }, [name, email, password, confirmPassword, selectedOrg])
 
   const handleSignup = async () => {
     setIsSubmitting(true);
@@ -62,7 +79,13 @@ export default function SignupPage() {
       return;
     }
 
-    const { data, error } = await signup(name, email, password, org);
+    if (!selectedOrg) {
+      setError("Selecciona una organización");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const { data, error } = await signup(name, email, password, selectedOrg.id);
     if (error || !data) {
       setError(error || "No se pudo registrar el usuario");
       setPassword("");
@@ -133,12 +156,25 @@ export default function SignupPage() {
             secureTextEntry
           />
 
-          <Input
-            label="Organización"
-            placeholder="Ingresa tu organización"
-            value={org}
-            onChangeText={setOrg}
-          />
+          {/* Selector de organización */}
+          <View style={styles.orgFieldContainer}>
+            <Text style={styles.orgLabel}>Organización</Text>
+            <TouchableOpacity
+              style={styles.orgSelector}
+              onPress={() => setShowOrgPicker(true)}
+              disabled={loadingOrgs}
+            >
+              <Text style={[
+                styles.orgSelectorText,
+                !selectedOrg && styles.orgPlaceholder,
+              ]}>
+                {loadingOrgs
+                  ? "Cargando..."
+                  : selectedOrg?.nombre ?? "Selecciona tu organización"}
+              </Text>
+              <ChevronDown size={20} color={colors.accent} />
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.buttonContainer}>
             <Button
@@ -158,11 +194,58 @@ export default function SignupPage() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Modal para seleccionar organización */}
+      <Modal
+        visible={showOrgPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowOrgPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecciona tu organización</Text>
+              <TouchableOpacity onPress={() => setShowOrgPicker(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {organizaciones.length === 0 ? (
+              <Text style={styles.emptyText}>No hay organizaciones disponibles.</Text>
+            ) : (
+              <FlatList
+                data={organizaciones}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[
+                      styles.orgItem,
+                      selectedOrg?.id === item.id && styles.orgItemSelected,
+                    ]}
+                    onPress={() => {
+                      setSelectedOrg(item);
+                      setShowOrgPicker(false);
+                    }}
+                  >
+                    <Text style={[
+                      styles.orgItemText,
+                      selectedOrg?.id === item.id && styles.orgItemTextSelected,
+                    ]}>
+                      {item.nombre}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   )
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -239,5 +322,91 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.text,
     fontSize: 13,
     textAlign: 'center',
-  }
+  },
+  // Org selector
+  orgFieldContainer: {
+    width: '100%',
+    marginBottom: 12,
+  },
+  orgLabel: {
+    marginBottom: 4,
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: 0.3,
+  },
+  orgSelector: {
+    height: 48,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  orgSelectorText: {
+    fontSize: 16,
+    color: colors.text,
+    flex: 1,
+  },
+  orgPlaceholder: {
+    color: colors.accent,
+  },
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: '60%',
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  modalClose: {
+    fontSize: 20,
+    color: colors.accent,
+    padding: 4,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: colors.accent,
+    fontSize: 15,
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  orgItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: colors.foreground,
+  },
+  orgItemSelected: {
+    backgroundColor: colors.primary,
+  },
+  orgItemText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  orgItemTextSelected: {
+    color: '#FFF',
+  },
 })

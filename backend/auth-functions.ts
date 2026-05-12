@@ -1,5 +1,24 @@
 import { supabase } from "@/backend/supabase/client";
 
+export interface Organizacion {
+  id: string;
+  nombre: string;
+}
+
+// Obtiene la lista de organizaciones para el registro
+export async function fetchOrganizaciones() {
+  const { data, error } = await supabase
+    .from("organizacion")
+    .select("id, nombre")
+    .order("nombre", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching organizaciones:", error);
+    return { data: [] as Organizacion[], error: error.message };
+  }
+
+  return { data: (data ?? []) as Organizacion[], error: null };
+}
 
 // Obtiene informacion del usuario
 export async function getUserData() {
@@ -32,8 +51,21 @@ export async function login(email: string, password: string) {
 }
 
 // Function to create a new user
-export async function signup(name: string, email: string, password: string, organization: string,) {
-  const {data: signupData, error: signupError} = await supabase.auth.signUp({email, password});
+export async function signup(name: string, email: string, password: string, orgId: string) {
+
+  // Pasar todos los datos en metadata para que el trigger los lea
+  const {data: signupData, error: signupError} = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: name,
+        rol_id: 4,
+        organizacion_id: orgId,
+        correo: email,
+      },
+    },
+  });
 
   if (signupError) {
     console.error("Error signup:", signupError);
@@ -43,20 +75,28 @@ export async function signup(name: string, email: string, password: string, orga
     }
   }
 
-  const {data: userData, error: userError} = await supabase.from("users").insert({
+  // Supabase retorna un user sin identities si el correo ya está registrado
+  if (signupData.user && signupData.user.identities?.length === 0) {
+    return {
+      data: null,
+      error: "Este correo ya está registrado. Intenta iniciar sesión.",
+    }
+  }
+
+  // Upsert como respaldo por si el trigger no llena todos los campos
+  const {data: userData, error: userError} = await supabase.from("usuario").upsert({
     id: signupData.user?.id,
     nombre: name,
     foto_url: null,
     correo: email,
-    rol: 3, // Rol de usuario normal, cambiar a 4 cuando se implemente lo de las invitaciones para poder acceder a la organizacion 
-  })
+    rol_id: 4,
+    organizacion_id: orgId,
+  }, { onConflict: "id" })
 
   if (userError) {
     console.error("Error creating user in database:", userError);
-    return {
-      data: null,
-      error: userError.message,
-    }
+    // No retornamos error aquí porque el usuario ya se creó en auth
+    // El trigger pudo haber creado la fila parcialmente
   }
 
   return {
@@ -92,9 +132,10 @@ export async function allowAccess(userId: string, minRole: number): Promise<bool
     return false;
   }
 
-  if (data.rol_id <= minRole) {
-    return true;
-  } else {
+  // Si no tiene rol asignado, no tiene acceso
+  if (data.rol_id == null) {
     return false;
   }
+
+  return data.rol_id <= minRole;
 }

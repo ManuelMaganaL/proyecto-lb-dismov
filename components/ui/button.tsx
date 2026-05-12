@@ -9,6 +9,7 @@ import {
 } from "react-native";
 
 import { useTheme } from "@/context/theme";
+import { ThemeColors } from "@/constants/colors";
 
 export type ButtonVariant = "main" | "secondary" | "outline" | "danger";
 
@@ -58,6 +59,7 @@ export function Button({
   return (
     <TouchableOpacity
       disabled={isDisabled}
+      activeOpacity={0.8}
       style={containerStyles}
       {...rest}
     >
@@ -70,42 +72,55 @@ export function Button({
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   base: {
-    height: 48,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    height: 52,
+    paddingHorizontal: 20,
+    borderRadius: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
+    borderWidth: 1.5,
     width: "100%",
   },
   main: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
   },
   secondary: {
-    backgroundColor: colors.secondary,
-    borderColor: colors.secondary,
+    backgroundColor: colors.surface,
+    borderColor: colors.foreground,
+    shadowColor: colors.text,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   outline: {
     backgroundColor: "transparent",
-    borderColor: colors.text,
+    borderColor: colors.foreground,
   },
   danger: {
     backgroundColor: colors.danger,
-    borderColor: colors.background,
+    borderColor: colors.danger,
   },
   disabled: {
     backgroundColor: colors.foreground,
-    borderColor: colors.text,
-    opacity: 0.2,
+    borderColor: colors.foreground,
+    opacity: 0.5,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   label: {
     color: colors.background,
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
+    letterSpacing: 0.3,
   } as TextStyle,
   labelSecondary: {
     color: colors.text,
@@ -114,7 +129,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.text,
   },
   labelDanger: {
-    color: colors.text,
+    color: colors.background,
   },
 });
 

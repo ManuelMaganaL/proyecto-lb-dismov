@@ -1,7 +1,8 @@
 import { View, Text, StyleSheet } from "react-native";
 import { Settings } from "lucide-react-native";
 import { useRouter } from "expo-router";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/context/theme";
+import { ThemeColors } from "@/constants/colors";
 
 import { Button } from "@/components/ui/button";
 
@@ -20,14 +21,14 @@ export default function NoAdmin() {
       <View style={styles.buttonContainer}>
         <Button
           title="Regresar"
-          onPress={() => router.replace("/users/(tabs)")}
+          onPress={() => router.replace("/users/(tabs)/historial")}
         />
       </View>
     </View>
   );
 }
 
-const createStyles = (colors: any) =>
+const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       flex: 1,
