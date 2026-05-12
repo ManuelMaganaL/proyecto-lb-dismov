@@ -18,7 +18,7 @@ export interface OrganizacionUsuario {
   id: string;
   nombre: string;
   correo: string;
-  rol_id: number;
+  rol_id?: number;
   equipo_nombre?: string;
   puede_compartir?: boolean;
 }

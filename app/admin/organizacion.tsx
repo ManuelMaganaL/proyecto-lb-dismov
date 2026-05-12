@@ -114,7 +114,7 @@ export default function OrganizacionScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Gestión de Organización</Text>

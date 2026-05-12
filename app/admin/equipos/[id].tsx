@@ -301,7 +301,7 @@ export default function SingleTeamTab() {
                   style={styles.deleteButton}
                   onPress={() => handleRemoveMember(item.id, item.nombre)}
                 >
-                  <Trash2 size={16} color="#ef4444" />
+                  <Trash2 size={16} color={colors.danger} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -583,14 +583,14 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     gap: 8,
     alignSelf: 'flex-start',
     marginBottom: 16,
     marginTop: 8,
   },
   assignLeaderBtnText: {
-    color: '#FFF',
+    color: colors.background,
     fontWeight: 'bold',
     fontSize: 14,
   },
@@ -600,15 +600,15 @@ const createStyles = (colors: any) => StyleSheet.create({
     gap: 8,
   },
   removeLeaderBtnRight: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: colors.danger + '20',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#fca5a5',
+    borderColor: colors.danger + '60',
   },
   removeLeaderBtnText: {
-    color: '#ef4444',
+    color: colors.danger,
     fontWeight: '700',
     fontSize: 12,
   },
@@ -616,7 +616,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#fee2e2',
+    backgroundColor: colors.danger + '20',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -626,14 +626,14 @@ const createStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.primary,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     marginTop: 16,
     gap: 8,
   },
   addButtonFullText: {
     fontSize: 16,
     fontWeight: "600",
-    color: '#FFF',
+    color: colors.background,
   },
   emptyContainer: {
     alignItems: 'center',
