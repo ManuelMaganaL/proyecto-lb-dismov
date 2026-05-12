@@ -252,23 +252,64 @@ export async function getUserTargetOptions() {
   const { data: userData, error: userError } = await supabase.auth.getUser();
 
   if (userError || !userData.user) {
-    return {
-      data: null,
-      error: "No hay sesión activa.",
-    };
+    return { data: null, error: "No hay sesión activa." };
   }
 
-  const { data, error } = await supabase
+  // 1. Obtener información del usuario actual (rol y organización)
+  const { data: currentUserInfo } = await supabase
+    .from("usuario")
+    .select("rol_id, organizacion_id")
+    .eq("id", userData.user.id)
+    .single();
+
+  if (!currentUserInfo || !currentUserInfo.organizacion_id) {
+    return { data: [], error: null }; // Si no tiene organización, no puede compartir
+  }
+
+  // Consulta base: solo usuarios de la misma organización
+  let query = supabase
     .from("usuario")
     .select("id, nombre, correo")
-    .neq("id", userData.user.id)
-    .order("nombre", { ascending: true });
+    .eq("organizacion_id", currentUserInfo.organizacion_id)
+    .neq("id", userData.user.id);
+
+  // 2. Reglas de visibilidad:
+  // Si el usuario NO es admin (rol 1), solo puede ver a miembros de sus propios equipos
+  if (currentUserInfo.rol_id !== 1) {
+    // Obtener los equipos del usuario actual
+    const { data: misEquipos } = await supabase
+      .from("equipo_usuario")
+      .select("equipo_id")
+      .eq("usuario_id", userData.user.id);
+
+    const teamIds = misEquipos?.map(e => e.equipo_id) || [];
+
+    if (teamIds.length === 0) {
+      // Si no es admin y no tiene equipos, no puede enviarle a nadie
+      return { data: [], error: null };
+    }
+
+    // Obtener los IDs de todos los usuarios que están en esos equipos
+    const { data: compañeros } = await supabase
+      .from("equipo_usuario")
+      .select("usuario_id")
+      .in("equipo_id", teamIds);
+
+    const companionIds = Array.from(new Set(compañeros?.map(c => c.usuario_id) || []));
+
+    if (companionIds.length > 0) {
+      // Filtrar la consulta para solo mostrar a sus compañeros
+      query = query.in("id", companionIds);
+    } else {
+      // Tiene equipos, pero están vacíos
+      return { data: [], error: null };
+    }
+  }
+
+  const { data, error } = await query.order("nombre", { ascending: true });
 
   if (error) {
-    return {
-      data: null,
-      error: error.message,
-    };
+    return { data: null, error: error.message };
   }
 
   const options: UserTargetOption[] = (data ?? []).map((row) => ({
@@ -277,8 +318,6 @@ export async function getUserTargetOptions() {
     correo: ((row.correo as string | null) ?? "").trim() || undefined,
   }));
 
-  // Fallback estable: devolvemos lista base de usuarios visibles por RLS de `usuario`.
-  // El filtrado por organización/equipo se puede reactivar cuando se corrijan policies recursivas.
   return {
     data: options,
     error: null,

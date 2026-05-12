@@ -1,7 +1,7 @@
 import { ActivityIndicator } from 'react-native';
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react-native";
-import { Alert, Animated, Easing, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { ArrowLeft, Pencil, Plus, Trash2, Moon } from "lucide-react-native";
+import { Alert, Animated, Easing, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import ImageViewing from "react-native-image-viewing";
 
 import { useRouter } from "expo-router";
@@ -34,7 +34,7 @@ export default function HomeScreen() {
   const toastTimeout = useRef<NodeJS.Timeout | null>(null);
   const previewAnim = useRef(new Animated.Value(0)).current;
 
-  const { colors } = useTheme();
+  const { colors, dark, setDark } = useTheme();
   const styles = createStyles(colors);
 
   // Validaciones en tiempo real
@@ -417,16 +417,19 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            <Input
-              label="Nombre"
-              placeholder="Tu nombre"
-              value={fullName}
-              onChangeText={setFullName}
-              error={nameError ?? undefined}
-              accessible
-              accessibilityLabel="Campo de nombre"
-              testID="input-nombre"
-            />
+            <View style={styles.card}>
+              <Text style={styles.sectionHeader}>Datos Personales</Text>
+
+              <Input
+                label="Nombre"
+                placeholder="Tu nombre"
+                value={fullName}
+                onChangeText={setFullName}
+                error={nameError ?? undefined}
+                accessible
+                accessibilityLabel="Campo de nombre"
+                testID="input-nombre"
+              />
 
             <Input
               label="Correo"
@@ -471,30 +474,37 @@ export default function HomeScreen() {
                 disabled={saving || loading || hasValidationErrors}
               />
             </Animated.View>
+            </View>
+
+            {/* Configuración de Apariencia */}
+            <View style={styles.card}>
+              <Text style={styles.sectionHeader}>Apariencia</Text>
+              <View style={[styles.themeRow, { borderBottomWidth: 0 }]}>
+                <View style={styles.themeIconLabel}>
+                  <Moon size={20} color={colors.text} />
+                  <Text style={styles.themeLabel}>Modo Oscuro</Text>
+                </View>
+                <Switch
+                  trackColor={{ false: colors.foreground, true: colors.primary }}
+                  thumbColor={'#ffffff'}
+                  ios_backgroundColor={colors.foreground}
+                  onValueChange={(val) => setDark(val)}
+                  value={dark}
+                />
+              </View>
+            </View>
+
+            {/* Botón de Salir (Normal, no flotante) */}
+            <View style={{ marginTop: 30 }}>
+              <Button
+                variant="danger"
+                title="Cerrar sesión"
+                onPress={handleLogout}
+              />
+            </View>
 
             <StatusBar style="auto" />
           </ScrollView>
-          {/* Botón fijo abajo */}
-          <View
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: colors.background,
-              padding: 20,
-              paddingBottom: 32,
-              borderTopWidth: 1,
-              borderTopColor: colors.foreground,
-              zIndex: 10,
-            }}
-          >
-            <Button
-              variant="danger"
-              title="Cerrar sesión"
-              onPress={handleLogout}
-            />
-          </View>
         </View>
       </KeyboardAvoidingView>
 
@@ -743,5 +753,48 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   logoutButton: {
     marginTop: 12,
+  },
+  themeSection: {
+    marginTop: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.foreground,
+  },
+  themeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  themeIconLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  themeLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  card: {
+    backgroundColor: colors.surface || colors.background,
+    padding: 20,
+    borderRadius: 20,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: colors.foreground,
+    shadowColor: colors.text,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.subText,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 16,
   },
 });
