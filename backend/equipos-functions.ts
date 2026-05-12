@@ -275,3 +275,96 @@ export async function fetchUsuariosOrganizacionConEquipos(organizacionId: string
 
   return { data: usuariosConEquipos, error: null };
 }
+
+/**
+ * Elimina a un usuario de su rol de líder en un equipo específico.
+ * El equipo queda sin líder (leader_id = null) y el usuario pasa a rol 3.
+ */
+export async function removeLeaderFromEquipo(equipoId: string, oldLeaderId: string) {
+  // Quitar el líder del equipo
+  const { error: equipoError } = await supabase
+    .from("equipo")
+    .update({ leader_id: null })
+    .eq("id", equipoId)
+    .eq("leader_id", oldLeaderId); // validación de seguridad
+
+  if (equipoError) {
+    console.error("Error quitando líder del equipo:", equipoError);
+    return { success: false, error: equipoError.message };
+  }
+
+  // Bajar su rol a 3 (Usuario) solo si actualmente es rol 2 (Team Leader)
+  const { error: userError } = await supabase
+    .from("usuario")
+    .update({ rol_id: 3 })
+    .eq("id", oldLeaderId)
+    .eq("rol_id", 2);
+
+  if (userError) {
+    console.error("Error bajando rol de líder:", userError);
+    // Continuamos aunque haya error aquí, lo principal se hizo.
+  }
+
+  return { success: true, error: null };
+}
+
+/**
+ * Cambia el líder de un equipo. Aplica las reglas:
+ * - Elimina líder anterior si existe.
+ * - Saca al nuevo líder de todos sus equipos anteriores.
+ * - Si el nuevo líder era líder en otros equipos, esos equipos se quedan sin líder.
+ * - Sube el rol del nuevo líder a 2 (Team Leader).
+ * - Asigna al nuevo líder al nuevo equipo y a la tabla equipo_usuario.
+ */
+export async function changeEquipoLeader(equipoId: string, newLeaderId: string, oldLeaderId?: string | null) {
+  if (oldLeaderId) {
+    await removeLeaderFromEquipo(equipoId, oldLeaderId);
+  }
+
+  // Quitar al nuevo líder de otros equipos (equipo_usuario)
+  const { error: euError } = await supabase
+    .from("equipo_usuario")
+    .delete()
+    .eq("usuario_id", newLeaderId);
+
+  if (euError) {
+    console.error("Error quitando nuevo líder de sus equipos antiguos:", euError);
+  }
+
+  // Quitar la titularidad en otros equipos (leader_id = null)
+  const { error: leError } = await supabase
+    .from("equipo")
+    .update({ leader_id: null })
+    .eq("leader_id", newLeaderId);
+
+  if (leError) {
+    console.error("Error quitando liderazgo de otros equipos:", leError);
+  }
+
+  // Subir rol del nuevo líder a 2 (Team Leader) solo si actualmente es rol 3 (Usuario Normal)
+  const { error: urError } = await supabase
+    .from("usuario")
+    .update({ rol_id: 2 })
+    .eq("id", newLeaderId)
+    .eq("rol_id", 3);
+
+  if (urError) {
+    console.error("Error subiendo rol al nuevo líder:", urError);
+  }
+
+  // Asignar el nuevo líder al equipo
+  const { error: uEqError } = await supabase
+    .from("equipo")
+    .update({ leader_id: newLeaderId })
+    .eq("id", equipoId);
+
+  if (uEqError) {
+    console.error("Error asignando nuevo líder al equipo:", uEqError);
+    return { success: false, error: uEqError.message };
+  }
+
+  // Asegurar que el nuevo líder pertenezca a la tabla equipo_usuario de este equipo
+  await addMiembroEquipo(equipoId, newLeaderId);
+
+  return { success: true, error: null };
+}
